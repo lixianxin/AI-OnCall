@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        训练营 mock server 当前部署为 HTTP 服务。
+        这里只给联调云服务器放开明文访问，避免全局 cleartext 导致后续安全边界不清晰。
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">121.40.241.161</domain>
+    </domain-config>
+</network-security-config>

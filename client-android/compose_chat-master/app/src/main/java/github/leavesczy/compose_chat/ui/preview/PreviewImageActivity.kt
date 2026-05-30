@@ -1,0 +1,100 @@
+package github.leavesczy.compose_chat.ui.preview
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
+import github.leavesczy.compose_chat.R
+import github.leavesczy.compose_chat.ui.base.BaseActivity
+import github.leavesczy.compose_chat.utils.AlbumUtils
+import kotlinx.coroutines.launch
+
+/**
+ * @Author: leavesCZY
+ * @Date: 2026/5/20 17:18
+ * @Desc:
+ */
+class PreviewImageActivity : BaseActivity() {
+
+    companion object {
+
+        private const val KEY_IMAGE_URI_LIST = "keyImageUriList"
+
+        private const val KEY_INITIAL_PAGE = "keyInitialPage"
+
+        fun navTo(context: Context, imageUri: String) {
+            navTo(context = context, imageUriList = listOf(element = imageUri), initialPage = 0)
+        }
+
+        fun navTo(context: Context, imageUriList: List<String>, initialPage: Int) {
+            val intent = Intent(context, PreviewImageActivity::class.java)
+            intent.putStringArrayListExtra(KEY_IMAGE_URI_LIST, arrayListOf<String>().apply {
+                addAll(imageUriList)
+            })
+            intent.putExtra(KEY_INITIAL_PAGE, initialPage)
+            if (context !is Activity) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
+
+    }
+
+    private val imageUriList by lazy {
+        intent.getStringArrayListExtra(KEY_IMAGE_URI_LIST)?.filter { uri ->
+            uri.isNotBlank()
+        } ?: emptyList()
+    }
+
+    private val initialPage by lazy {
+        intent.getIntExtra(KEY_INITIAL_PAGE, 0)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            PreviewImagePage(
+                imageUriList = imageUriList,
+                initialPage = initialPage,
+                insertImageToAlbum = ::insertImageToAlbum
+            )
+        }
+    }
+
+    @Composable
+    override fun SetSystemBarUi() {
+        val localContext = LocalContext.current
+        LaunchedEffect(key1 = Unit) {
+            if (localContext is Activity) {
+                val window = localContext.window
+                WindowInsetsControllerCompat(window, window.decorView).apply {
+                    hide(WindowInsetsCompat.Type.statusBars())
+                    systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                    isAppearanceLightStatusBars = false
+                    isAppearanceLightNavigationBars = false
+                }
+            }
+        }
+    }
+
+    private fun insertImageToAlbum(imageUri: String) {
+        lifecycleScope.launch {
+            val result = AlbumUtils.insertImageToAlbum(
+                context = applicationContext,
+                imageUri = imageUri
+            )
+            if (result) {
+                showToast(resId = R.string.toast_saved_to_album)
+            } else {
+                showToast(resId = R.string.toast_save_failed)
+            }
+        }
+    }
+
+}

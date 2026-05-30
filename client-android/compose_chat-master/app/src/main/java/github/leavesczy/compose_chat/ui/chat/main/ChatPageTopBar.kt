@@ -1,0 +1,91 @@
+package github.leavesczy.compose_chat.ui.chat.main
+
+import android.app.Activity
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import github.leavesczy.compose_chat.base.models.Chat
+import github.leavesczy.compose_chat.ui.chat.group.GroupProfileActivity
+import github.leavesczy.compose_chat.ui.friend.FriendProfileActivity
+import github.leavesczy.compose_chat.ui.theme.AppTheme
+
+/**
+ * @Author: leavesCZY
+ * @Date: 2026/5/20 17:18
+ * @Desc:
+ */
+@Composable
+fun ChatPageTopBar(
+    modifier: Modifier,
+    chat: Chat,
+    title: String
+) {
+    val localContext = LocalContext.current
+    CenterAlignedTopAppBar(
+        modifier = modifier
+            .shadow(elevation = 0.8.dp),
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color),
+        title = {
+            Text(
+                modifier = Modifier,
+                text = title,
+                fontSize = 19.sp,
+                lineHeight = 20.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+            )
+        },
+        navigationIcon = {
+            IconButton(
+                content = {
+                    Icon(
+                        modifier = Modifier
+                            .size(size = 22.dp),
+                        imageVector = Icons.Default.ArrowBackIosNew,
+                        contentDescription = null
+                    )
+                },
+                onClick = {
+                    (localContext as Activity).finish()
+                }
+            )
+        },
+        actions = {
+            IconButton(
+                content = {
+                    Icon(
+                        modifier = Modifier
+                            .size(size = 24.dp),
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = null
+                    )
+                },
+                onClick = {
+                    when (chat) {
+                        is Chat.C2C -> {
+                            FriendProfileActivity.navTo(context = localContext, friendId = chat.id)
+                        }
+
+                        is Chat.Group -> {
+                            GroupProfileActivity.navTo(context = localContext, groupId = chat.id)
+                        }
+                    }
+                }
+            )
+        }
+    )
+}
