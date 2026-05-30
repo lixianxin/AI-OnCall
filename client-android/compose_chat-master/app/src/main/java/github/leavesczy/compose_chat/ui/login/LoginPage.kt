@@ -1,0 +1,210 @@
+package github.leavesczy.compose_chat.ui.login
+
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import github.leavesczy.compose_chat.R
+import github.leavesczy.compose_chat.provider.ToastProvider
+import github.leavesczy.compose_chat.ui.login.logic.LoginPageViewState
+import github.leavesczy.compose_chat.ui.theme.AppTheme
+
+/**
+ * @Author: leavesCZY
+ * @Date: 2026/5/20 17:18
+ * @Desc:
+ */
+@Composable
+internal fun LoginPage(viewState: LoginPageViewState) {
+    val localActivity = LocalActivity.current
+    val localSoftwareKeyboardController = LocalSoftwareKeyboardController.current
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize(),
+        containerColor = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color,
+        contentWindowInsets = WindowInsets()
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValues = innerPadding)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            if (viewState.panelVisible) {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(weight = 3f)
+                )
+                Logo(modifier = Modifier)
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(weight = 2f)
+                )
+                TextField(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    content = viewState.account,
+                    label = stringResource(id = R.string.login_account),
+                    onContentChange = viewState.onAccountInputChanged
+                )
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(weight = 1f)
+                )
+                TextField(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    content = viewState.password,
+                    label = stringResource(id = R.string.login_password),
+                    visualTransformation = PasswordVisualTransformation(),
+                    onContentChange = viewState.onPasswordInputChanged
+                )
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(weight = 2f)
+                )
+                LoginButton(
+                    modifier = Modifier,
+                    onClick = {
+                        val account = viewState.account.text
+                        val password = viewState.password.text
+                        if (account.isBlank()) {
+                            ToastProvider.showToast(resId = github.leavesczy.compose_chat.base.R.string.login_account_required)
+                        } else if (password.isBlank()) {
+                            ToastProvider.showToast(resId = github.leavesczy.compose_chat.base.R.string.login_password_required)
+                        } else {
+                            localSoftwareKeyboardController?.hide()
+                            viewState.onClickLogin(localActivity!!)
+                        }
+                    }
+                )
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(weight = 16f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Logo(modifier: Modifier) {
+    Text(
+        modifier = modifier,
+        text = stringResource(id = R.string.app_name),
+        style = TextStyle(
+            fontSize = 42.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            shadow = Shadow(
+                offset = Offset(x = 3f, y = 6f),
+                blurRadius = 3f
+            ),
+            color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+        )
+    )
+}
+
+@Composable
+private fun TextField(
+    modifier: Modifier,
+    content: TextFieldValue,
+    label: String,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    onContentChange: (content: TextFieldValue) -> Unit
+) {
+    OutlinedTextField(
+        modifier = modifier
+            .padding(horizontal = 40.dp),
+        value = content,
+        onValueChange = onContentChange,
+        maxLines = 1,
+        singleLine = true,
+        visualTransformation = visualTransformation,
+        label = {
+            Text(
+                modifier = Modifier,
+                text = label,
+                fontSize = 14.sp,
+                lineHeight = 16.sp,
+                color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+            )
+        },
+        textStyle = TextStyle(
+            fontSize = 17.sp,
+            color = AppTheme.colorScheme.c_FF1C1B1F_FFFFFFFF.color
+        ),
+        colors = OutlinedTextFieldDefaults.colors(
+            cursorColor = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color,
+            focusedBorderColor = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color.copy(
+                alpha = 0.7f
+            ),
+            unfocusedBorderColor = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color.copy(
+                alpha = 0.5f
+            )
+        )
+    )
+}
+
+@Composable
+private fun LoginButton(
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .padding(horizontal = 30.dp)
+            .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(size = 24.dp))
+            .background(color = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            modifier = Modifier
+                .padding(vertical = 12.dp),
+            text = stringResource(id = R.string.login),
+            fontSize = 15.sp,
+            lineHeight = 16.sp,
+            color = AppTheme.colorScheme.c_FFFFFFFF_FFFFFFFF.color
+        )
+    }
+}
