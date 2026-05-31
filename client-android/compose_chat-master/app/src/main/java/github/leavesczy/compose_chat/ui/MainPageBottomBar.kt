@@ -13,10 +13,8 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material.icons.rounded.ChatBubble
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -43,6 +41,12 @@ import github.leavesczy.compose_chat.ui.theme.AppTheme
 @Composable
 fun MainPageBottomBar(viewState: MainPageBottomBarViewState) {
     val unreadCountOverflow = stringResource(id = R.string.unread_count_overflow)
+    // 原 demo 的“消息 / 通讯录”逻辑继续保留，只是不再作为当前产品的底部主入口展示。
+    val productTabs = listOf(
+        MainPageTab.Workbench,
+        MainPageTab.AiOncall,
+        MainPageTab.Person
+    )
     Row(
         modifier = Modifier
             .shadow(elevation = 28.dp)
@@ -52,19 +56,19 @@ fun MainPageBottomBar(viewState: MainPageBottomBarViewState) {
             .height(height = 64.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        for (pageTab in MainPageTab.entries) {
+        for (pageTab in productTabs) {
             val icon: ImageVector
             val label: String
             val unreadMessageCount: Long
             when (pageTab) {
                 MainPageTab.Conversation -> {
-                    icon = Icons.Rounded.ChatBubble
+                    icon = Icons.Filled.Apps
                     label = "消息"
                     unreadMessageCount = viewState.unreadMessageCount
                 }
 
                 MainPageTab.Friendship -> {
-                    icon = Icons.Filled.Groups
+                    icon = Icons.Filled.Apps
                     label = "通讯录"
                     unreadMessageCount = 0
                 }
@@ -77,7 +81,7 @@ fun MainPageBottomBar(viewState: MainPageBottomBarViewState) {
 
                 MainPageTab.AiOncall -> {
                     icon = Icons.Filled.SmartToy
-                    label = "AI oncall"
+                    label = "AI助手"
                     unreadMessageCount = 0
                 }
 

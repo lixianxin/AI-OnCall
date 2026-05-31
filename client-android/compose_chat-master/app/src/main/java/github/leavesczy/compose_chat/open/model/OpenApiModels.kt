@@ -18,6 +18,12 @@ data class LoginRequest(
     val password: String
 )
 
+data class RegisterRequest(
+    val account: String,
+    val password: String,
+    val displayName: String
+)
+
 data class LoginResponse(
     val token: String,
     val userId: String?,
@@ -57,4 +63,31 @@ data class ApprovalItemDto(
     val applicant: String,
     val status: String,
     val createdAt: String
+)
+
+data class SuccessResponse(
+    val success: Boolean,
+    val tabId: String? = null
+)
+
+data class CreateCustomWebTabRequest(
+    val id: String,
+    val displayName: String,
+    val description: String,
+    val icon: String,
+    val route: String,
+    val entryUri: String,
+    val minContainerVersion: Int = 1
+)
+
+data class TabMutationResponse(
+    val success: Boolean,
+    val tabId: String?,
+    val tab: TabManifest?
+)
+
+data class OnCallToolEvent(
+    val name: String,
+    val status: String,
+    val summary: String
 )

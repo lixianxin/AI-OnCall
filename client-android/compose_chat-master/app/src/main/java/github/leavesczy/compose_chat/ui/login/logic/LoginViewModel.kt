@@ -9,6 +9,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.viewModelScope
 import github.leavesczy.compose_chat.open.config.OpenApiConfig
 import github.leavesczy.compose_chat.open.model.LoginRequest
+import github.leavesczy.compose_chat.open.model.RegisterRequest
 import github.leavesczy.compose_chat.open.network.OpenApiResult
 import github.leavesczy.compose_chat.open.repository.OpenAuthRepository
 import github.leavesczy.compose_chat.open.session.OpenSessionManager
@@ -39,9 +40,16 @@ class LoginViewModel : BaseViewModel() {
             panelVisible = !OpenSessionManager.isLoggedIn,
             account = account,
             password = password,
+            registerDisplayName = "".toTextFieldValue(),
+            registerPasswordConfirm = "".toTextFieldValue(),
+            registerMode = false,
             onAccountInputChanged = ::onAccountInputChanged,
             onPasswordInputChanged = ::onPasswordInputChanged,
-            onClickLogin = ::onClickLogin
+            onRegisterDisplayNameInputChanged = ::onRegisterDisplayNameInputChanged,
+            onRegisterPasswordConfirmInputChanged = ::onRegisterPasswordConfirmInputChanged,
+            onToggleRegisterMode = ::onToggleRegisterMode,
+            onClickLogin = ::onClickLogin,
+            onClickRegister = ::onClickRegister
         )
     }
 
@@ -53,6 +61,20 @@ class LoginViewModel : BaseViewModel() {
 
     private fun onPasswordInputChanged(input: TextFieldValue) {
         loginPageViewState = loginPageViewState.copy(password = input)
+    }
+
+    private fun onRegisterDisplayNameInputChanged(input: TextFieldValue) {
+        loginPageViewState = loginPageViewState.copy(
+            registerDisplayName = input.copy(text = input.text.trim())
+        )
+    }
+
+    private fun onRegisterPasswordConfirmInputChanged(input: TextFieldValue) {
+        loginPageViewState = loginPageViewState.copy(registerPasswordConfirm = input)
+    }
+
+    private fun onToggleRegisterMode() {
+        loginPageViewState = loginPageViewState.copy(registerMode = !loginPageViewState.registerMode)
     }
 
     fun tryAutoLogin(activity: Activity) {
@@ -82,6 +104,55 @@ class LoginViewModel : BaseViewModel() {
 
                 is OpenApiResult.Failed -> {
                     showToast(msg = result.message)
+                }
+            }
+            dismissLoadingDialog()
+        }
+    }
+
+    private fun onClickRegister(activity: Activity) {
+        viewModelScope.launch {
+            val account = loginPageViewState.account.text.trim()
+            val password = loginPageViewState.password.text
+            val passwordConfirm = loginPageViewState.registerPasswordConfirm.text
+            val displayName = loginPageViewState.registerDisplayName.text.trim()
+            if (account.isBlank()) {
+                showToast(resId = github.leavesczy.compose_chat.base.R.string.login_account_required)
+                return@launch
+            }
+            if (displayName.isBlank()) {
+                showToast(msg = "请输入昵称")
+                return@launch
+            }
+            if (password.isBlank()) {
+                showToast(resId = github.leavesczy.compose_chat.base.R.string.login_password_required)
+                return@launch
+            }
+            if (password != passwordConfirm) {
+                showToast(msg = "两次输入的密码不一致")
+                return@launch
+            }
+            showLoadingDialog()
+            // 注册接口目前在云端返回 404。这里先按照约定协议接入，接口上线后可直接复用登录成功流程。
+            when (val result = authRepository.register(
+                RegisterRequest(
+                    account = account,
+                    password = password,
+                    displayName = displayName
+                )
+            )) {
+                is OpenApiResult.Success -> {
+                    navToMainActivityAndFinish(activity = activity)
+                }
+
+                is OpenApiResult.Failed -> {
+                    showToast(
+                        msg = if (result.code == "HTTP_ERROR" && result.message.contains("404")) {
+                            "注册接口暂未开放，请先使用演示账号登录"
+                        } else {
+                            result.message
+                        }
+                    )
                 }
             }
             dismissLoadingDialog()
