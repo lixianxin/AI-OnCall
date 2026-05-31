@@ -55,7 +55,7 @@ class MainViewModel : BaseViewModel() {
 
     var bottomBarViewState by mutableStateOf(
         value = MainPageBottomBarViewState(
-            selectedTab = MainPageTab.Conversation,
+            selectedTab = MainPageTab.Workbench,
             selectedOpenTabId = null,
             openTabs = emptyList(),
             unreadMessageCount = 0L,
@@ -163,6 +163,14 @@ class MainViewModel : BaseViewModel() {
         }
     }
 
+    fun backToWorkbench() {
+        val viewState = bottomBarViewState
+        bottomBarViewState = viewState.copy(
+            selectedTab = MainPageTab.Workbench,
+            selectedOpenTabId = null
+        )
+    }
+
     private fun loadOpenTabs() {
         viewModelScope.launch {
             val remoteTabs = openTabRepository.getRemoteTabs()
@@ -179,6 +187,10 @@ class MainViewModel : BaseViewModel() {
             bottomBarViewState = bottomBarViewState.copy(openTabs = openTabs)
             updateOpenProfileState()
         }
+    }
+
+    fun refreshOpenTabs() {
+        loadOpenTabs()
     }
 
     private fun refreshOpenProfile() {

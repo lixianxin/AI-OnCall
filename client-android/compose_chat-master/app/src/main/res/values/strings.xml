@@ -11,10 +11,10 @@
     <string name="matisse_cannot_select_both_picture_and_video_at_the_same_time">不能同时选择图片和视频</string>
     <string name="matisse_no_apps_support_take_picture">没有可用于拍照的应用</string>
     <string name="matisse_preview">预览</string>
-    <string name="matisse_sure">确定(%d/%d)</string>
+    <string name="matisse_sure">确定(%1$d/%2$d)</string>
     <string name="matisse_back">返回</string>
     <!-- Matisse end-->
-    <string name="app_name">飞书训练营</string>
+    <string name="app_name">开放式Tab容器</string>
     <string name="login_account">账号</string>
     <string name="login_password">密码</string>
     <string name="login">登录</string>

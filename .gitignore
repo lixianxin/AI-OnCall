@@ -141,3 +141,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Personal local work notes
+docs/server-api-test-report-2026-05-31.md

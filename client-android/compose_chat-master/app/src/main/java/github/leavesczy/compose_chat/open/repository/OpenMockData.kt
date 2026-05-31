@@ -58,6 +58,7 @@ object OpenMockData {
                 permissions = emptyList(),
                 sortOrder = 40
             ),
+            bilibiliWebTab(),
             tab(
                 id = "ai-oncall",
                 displayName = "AI oncall",
@@ -89,6 +90,20 @@ object OpenMockData {
                 minContainerVersion = 2,
                 sortOrder = 70
             )
+        )
+    }
+
+    fun bilibiliWebTab(): TabManifest {
+        return tab(
+            id = "bilibili-web",
+            displayName = "B站首页",
+            description = "通过 WebView 接入哔哩哔哩移动端首页，演示用户自定义网页 Tab。",
+            icon = "video",
+            route = "/bilibili",
+            entryType = EntryType.Web,
+            entryUri = "https://m.bilibili.com",
+            permissions = emptyList(),
+            sortOrder = 45
         )
     }
 
