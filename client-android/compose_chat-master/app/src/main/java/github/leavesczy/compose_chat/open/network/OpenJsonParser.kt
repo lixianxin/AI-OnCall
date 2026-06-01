@@ -9,9 +9,12 @@ import github.leavesczy.compose_chat.open.model.HealthResponse
 import github.leavesczy.compose_chat.open.model.LoginResponse
 import github.leavesczy.compose_chat.open.model.MeResponse
 import github.leavesczy.compose_chat.open.model.MenuItemDto
+import github.leavesczy.compose_chat.open.model.OnCallToolEvent
 import github.leavesczy.compose_chat.open.model.SemanticVersionDto
+import github.leavesczy.compose_chat.open.model.SuccessResponse
 import github.leavesczy.compose_chat.open.model.TabExtensionDto
 import github.leavesczy.compose_chat.open.model.TabManifest
+import github.leavesczy.compose_chat.open.model.TabMutationResponse
 import github.leavesczy.compose_chat.open.model.TeamDto
 import github.leavesczy.compose_chat.open.model.TitleBarExtensionDto
 import org.json.JSONArray
@@ -88,6 +91,43 @@ object OpenJsonParser {
         return JSONArray(json).mapObjects(::parseTabManifest)
     }
 
+    fun parseSuccess(json: String): SuccessResponse {
+        val obj = JSONObject(json)
+        return SuccessResponse(
+            success = obj.optBoolean("success"),
+            tabId = obj.optString("tabId").ifBlank { null }
+        )
+    }
+
+    fun parseTabMutation(json: String): TabMutationResponse {
+        val obj = JSONObject(json)
+        return TabMutationResponse(
+            success = obj.optBoolean("success"),
+            tabId = obj.optString("tabId").ifBlank { null },
+            tab = obj.optJSONObject("tab")?.let(::parseTabManifest)
+        )
+    }
+
+    fun parseOnCallDelta(data: String): String {
+        return JSONObject(data).optString("text")
+    }
+
+    fun parseOnCallTool(data: String): OnCallToolEvent {
+        val obj = JSONObject(data)
+        return OnCallToolEvent(
+            name = obj.optString("name").ifBlank { "tool" },
+            status = obj.optString("status"),
+            summary = obj.optString("summary")
+        )
+    }
+
+    fun parseOnCallDoneMessageId(data: String): String? {
+        if (data.isBlank() || data == "{}") {
+            return null
+        }
+        return JSONObject(data).optString("messageId").ifBlank { null }
+    }
+
     fun parseTabManifest(obj: JSONObject): TabManifest {
         return TabManifest(
             id = obj.optString("id"),
@@ -110,6 +150,9 @@ object OpenJsonParser {
     fun parseError(json: String?): OpenApiResult.Failed {
         if (json.isNullOrBlank()) {
             return OpenApiResult.Failed(code = "NETWORK_ERROR", message = "Empty error body")
+        }
+        if (!json.trimStart().startsWith("{")) {
+            return OpenApiResult.Failed(code = "HTTP_ERROR", message = json.trim())
         }
         return runCatching {
             val obj = JSONObject(json)

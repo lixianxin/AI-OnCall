@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Sailing
+import androidx.compose.material.icons.filled.SmartDisplay
 import androidx.compose.material.icons.rounded.ColorLens
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.runtime.Stable
@@ -15,7 +16,8 @@ import github.leavesczy.compose_chat.open.model.TabManifest
 data class OpenTabItem(
     val manifest: TabManifest,
     val openState: OpenTabState,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val source: OpenTabSource
 ) {
     val id: String
         get() = manifest.id
@@ -35,6 +37,13 @@ enum class OpenTabState {
     InvalidConfig
 }
 
+@Stable
+enum class OpenTabSource {
+    Remote,
+    ClientBuiltIn,
+    LocalMock
+}
+
 object OpenTabRegistry {
 
     private val nativeRoutes = setOf(
@@ -45,7 +54,7 @@ object OpenTabRegistry {
     )
 
     fun supportsRoute(route: String): Boolean {
-        return route in nativeRoutes || route == "/docs"
+        return route in nativeRoutes || route == "/docs" || route == "/bilibili" || route.startsWith("/custom-")
     }
 
     fun supportsEntryType(entryType: EntryType): Boolean {
@@ -58,6 +67,7 @@ object OpenTabRegistry {
             "calendar" -> Icons.Rounded.WbSunny
             "finance" -> Icons.Rounded.ColorLens
             "docs" -> Icons.Filled.Menu
+            "video", "bilibili" -> Icons.Filled.SmartDisplay
             "ai", "oncall", "ai-oncall" -> Icons.Filled.MoreVert
             else -> Icons.Filled.Menu
         }
