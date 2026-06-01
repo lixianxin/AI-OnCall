@@ -47,18 +47,10 @@ fun MainPage(
                     .fillMaxSize(),
                 contentWindowInsets = WindowInsets(),
                 containerColor = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color,
-                topBar = {
-                    if (mainViewModel.bottomBarViewState.selectedOpenTabId != null || mainViewModel.bottomBarViewState.selectedTab != MainPageTab.Person) {
-                        MainPageTopBar(
-                            viewState = mainViewModel.topBarViewState,
-                            showFriendshipDialog = {
-                                friendshipViewModel.showFriendshipDialog()
-                            }
-                        )
-                    }
-                },
                 bottomBar = {
-                    MainPageBottomBar(viewState = mainViewModel.bottomBarViewState)
+                    if (mainViewModel.bottomBarViewState.selectedTab != MainPageTab.AiOncall) {
+                        MainPageBottomBar(viewState = mainViewModel.bottomBarViewState)
+                    }
                 }
             ) { innerPadding ->
                 Box(
@@ -72,7 +64,14 @@ fun MainPage(
                         tab.id == bottomBarViewState.selectedOpenTabId
                     }
                     if (selectedOpenTab != null) {
-                        OpenTabContentHost(tab = selectedOpenTab)
+                        OpenTabContentHost(
+                            tab = selectedOpenTab,
+                            onBackToWorkbench = if (bottomBarViewState.selectedTab == MainPageTab.Workbench) {
+                                mainViewModel::backToWorkbench
+                            } else {
+                                null
+                            }
+                        )
                     } else {
                         when (bottomBarViewState.selectedTab) {
                             MainPageTab.Conversation -> {
@@ -86,12 +85,17 @@ fun MainPage(
                             MainPageTab.Workbench -> {
                                 OpenWorkbenchPage(
                                     openTabs = bottomBarViewState.openTabs,
+                                    onRefreshTabs = mainViewModel::refreshOpenTabs,
                                     onClickOpenTab = bottomBarViewState.onClickOpenTab
                                 )
                             }
 
                             MainPageTab.AiOncall -> {
-                                OpenTabContentHost(tab = null)
+                                OpenTabContentHost(
+                                    tab = bottomBarViewState.openTabs.firstOrNull { tab ->
+                                        tab.id == "ai-oncall"
+                                    }
+                                )
                             }
 
                             MainPageTab.Person -> {
