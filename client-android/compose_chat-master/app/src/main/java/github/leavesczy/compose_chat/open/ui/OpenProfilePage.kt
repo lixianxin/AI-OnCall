@@ -24,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -43,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import github.leavesczy.compose_chat.R
 import github.leavesczy.compose_chat.open.repository.OpenAvatarRepository
 import github.leavesczy.compose_chat.ui.logic.OpenProfileViewState
+import github.leavesczy.compose_chat.ui.theme.AppTheme
 import github.leavesczy.compose_chat.ui.widgets.ComponentImage
 import github.leavesczy.compose_chat.ui.widgets.CommonButton
 
@@ -83,10 +86,10 @@ fun OpenProfilePage(
         if (viewState.errorMessage != null) {
             ErrorCard(viewState = viewState)
         }
-        AccountSummaryCard(viewState = viewState)
+        ServiceStatusCard(viewState = viewState)
         BusinessSummaryCard(viewState = viewState)
         PermissionCard(permissions = viewState.permissions)
-        CollapsibleDebugInfoCard(viewState = viewState)
+        DebugInfoCard(viewState = viewState)
         ActionCard(viewState = viewState)
     }
 }
@@ -229,13 +232,13 @@ private fun ErrorCard(viewState: OpenProfileViewState) {
 }
 
 @Composable
-private fun AccountSummaryCard(viewState: OpenProfileViewState) {
-    SectionCard(title = "账号状态") {
-        InfoRow(label = "服务连接", value = viewState.serviceStatus, iconSuccess = true)
-        InfoRow(label = "团队", value = viewState.teamName)
-        if (viewState.serverTime != "-") {
-            InfoRow(label = "同步时间", value = viewState.serverTime)
-        }
+private fun ServiceStatusCard(viewState: OpenProfileViewState) {
+    SectionCard(title = "服务状态") {
+        InfoRow(label = "连接状态", value = viewState.serviceStatus, iconSuccess = true)
+        InfoRow(label = "运行模式", value = viewState.serviceMode)
+        InfoRow(label = "API 版本", value = viewState.apiVersion)
+        InfoRow(label = "SSE", value = viewState.sseAvailableText)
+        InfoRow(label = "服务时间", value = viewState.serverTime)
     }
 }
 
@@ -269,13 +272,10 @@ private fun BusinessSummaryCard(viewState: OpenProfileViewState) {
 
 @Composable
 private fun PermissionCard(permissions: List<String>) {
-    val displayPermissions = permissions
-        .map { permission -> permission.toDisplayPermissionName() }
-        .distinct()
-    SectionCard(title = "可用能力") {
-        if (displayPermissions.isEmpty()) {
+    SectionCard(title = "权限") {
+        if (permissions.isEmpty()) {
             Text(
-                text = "当前账号暂无可用业务能力。",
+                text = "当前账号没有业务权限。",
                 fontSize = 14.sp,
                 lineHeight = 18.sp,
                 color = Color(color = 0xFF6B7280)
@@ -287,7 +287,7 @@ private fun PermissionCard(permissions: List<String>) {
                 horizontalArrangement = Arrangement.spacedBy(space = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(space = 8.dp)
             ) {
-                displayPermissions.forEach { permission ->
+                permissions.forEach { permission ->
                     PermissionChip(permission = permission)
                 }
             }
@@ -296,29 +296,12 @@ private fun PermissionCard(permissions: List<String>) {
 }
 
 @Composable
-private fun CollapsibleDebugInfoCard(viewState: OpenProfileViewState) {
-    var expanded by remember { mutableStateOf(false) }
+private fun DebugInfoCard(viewState: OpenProfileViewState) {
     SectionCard(title = "调试信息") {
-        Text(
-            modifier = Modifier
-                .clip(shape = RoundedCornerShape(size = 8.dp))
-                .background(color = Color(color = 0xFFF3F6FA))
-                .clickable { expanded = !expanded }
-                .padding(horizontal = 12.dp, vertical = 9.dp),
-            text = if (expanded) "收起联调信息" else "展开联调信息",
-            fontSize = 13.sp,
-            lineHeight = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(color = 0xFF2563EB)
-        )
-        if (expanded) {
-            InfoRow(label = "Base URL", value = viewState.baseUrl)
-            InfoRow(label = "Token", value = viewState.maskedToken)
-            InfoRow(label = "容器版本", value = viewState.containerVersion.toString())
-            InfoRow(label = "API 版本", value = viewState.apiVersion)
-            InfoRow(label = "运行模式", value = viewState.serviceMode)
-            InfoRow(label = "SSE", value = viewState.sseAvailableText)
-        }
+        // token 只展示掩码，方便联调确认登录态存在，同时避免在界面上暴露完整凭证。
+        InfoRow(label = "Base URL", value = viewState.baseUrl)
+        InfoRow(label = "Token", value = viewState.maskedToken)
+        InfoRow(label = "容器版本", value = viewState.containerVersion.toString())
     }
 }
 
@@ -453,11 +436,17 @@ private fun PermissionChip(permission: String) {
         )
         Column {
             Text(
-                text = permission,
+                text = permission.toDisplayPermissionName(),
                 fontSize = 13.sp,
                 lineHeight = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(color = 0xFF111827)
+            )
+            Text(
+                text = permission,
+                fontSize = 11.sp,
+                lineHeight = 13.sp,
+                color = Color(color = 0xFF6B7280)
             )
         }
     }

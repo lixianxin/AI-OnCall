@@ -2,18 +2,12 @@ package github.leavesczy.compose_chat.open.network
 
 import github.leavesczy.compose_chat.open.model.ApprovalItemDto
 import github.leavesczy.compose_chat.open.model.ApprovalSummaryResponse
-import github.leavesczy.compose_chat.open.model.CalendarEventDto
-import github.leavesczy.compose_chat.open.model.CalendarSummaryResponse
-import github.leavesczy.compose_chat.open.model.DebugDatabaseDto
-import github.leavesczy.compose_chat.open.model.DebugPermissionDto
 import github.leavesczy.compose_chat.open.model.DebugStatusResponse
 import github.leavesczy.compose_chat.open.model.EntryType
 import github.leavesczy.compose_chat.open.model.FabExtensionDto
 import github.leavesczy.compose_chat.open.model.HealthResponse
 import github.leavesczy.compose_chat.open.model.LoginResponse
 import github.leavesczy.compose_chat.open.model.MeResponse
-import github.leavesczy.compose_chat.open.model.OnCallMessageDto
-import github.leavesczy.compose_chat.open.model.OnCallSessionDto
 import github.leavesczy.compose_chat.open.model.MenuItemDto
 import github.leavesczy.compose_chat.open.model.OnCallToolEvent
 import github.leavesczy.compose_chat.open.model.SemanticVersionDto
@@ -66,63 +60,31 @@ object OpenJsonParser {
 
     fun parseDebugStatus(json: String): DebugStatusResponse {
         val obj = JSONObject(json)
-        val databaseObj = obj.optJSONObject("database")
         return DebugStatusResponse(
             serverTime = obj.optString("serverTime"),
             apiVersion = obj.optString("apiVersion"),
             mockMode = obj.optBoolean("mockMode"),
             sseAvailable = obj.optBoolean("sseAvailable"),
-            tabCount = obj.optInt("tabCount"),
-            database = databaseObj?.let {
-                DebugDatabaseDto(
-                    enabled = it.optBoolean("enabled"),
-                    type = it.optString("type")
-                )
-            }
+            tabCount = obj.optInt("tabCount")
         )
     }
 
     fun parseApprovalSummary(json: String): ApprovalSummaryResponse {
         val obj = JSONObject(json)
-        val items = obj.optJSONArray("items").mapObjects(::parseApprovalItem)
+        val items = obj.optJSONArray("items").mapObjects { item ->
+            ApprovalItemDto(
+                id = item.optString("id"),
+                title = item.optString("title"),
+                applicant = item.optString("applicant"),
+                status = item.optString("status"),
+                createdAt = item.optString("createdAt")
+            )
+        }
         return ApprovalSummaryResponse(
             pendingCount = obj.optInt("pendingCount"),
             approvedToday = obj.optInt("approvedToday"),
             items = items
         )
-    }
-
-    fun parseApprovalItems(json: String): List<ApprovalItemDto> {
-        return JSONArray(json).mapObjects(::parseApprovalItem)
-    }
-
-    fun parseApprovalItem(json: String): ApprovalItemDto {
-        return parseApprovalItem(JSONObject(json))
-    }
-
-    fun parseCalendarSummary(json: String): CalendarSummaryResponse {
-        val obj = JSONObject(json)
-        return CalendarSummaryResponse(
-            todayCount = obj.optInt("todayCount"),
-            events = obj.optJSONArray("events").mapObjects(::parseCalendarEvent)
-        )
-    }
-
-    fun parseCalendarEvents(json: String): List<CalendarEventDto> {
-        return JSONArray(json).mapObjects(::parseCalendarEvent)
-    }
-
-    fun parseCalendarEvent(json: String): CalendarEventDto {
-        return parseCalendarEvent(JSONObject(json))
-    }
-
-    fun parseDebugPermissions(json: String): List<DebugPermissionDto> {
-        return JSONArray(json).mapObjects { item ->
-            DebugPermissionDto(
-                code = item.optString("code"),
-                description = item.optString("description")
-            )
-        }
     }
 
     fun parseTabs(json: String): List<TabManifest> {
@@ -166,22 +128,6 @@ object OpenJsonParser {
         return JSONObject(data).optString("messageId").ifBlank { null }
     }
 
-    fun parseOnCallSessions(json: String): List<OnCallSessionDto> {
-        return JSONArray(json).mapObjects(::parseOnCallSession)
-    }
-
-    fun parseOnCallSession(json: String): OnCallSessionDto {
-        return parseOnCallSession(JSONObject(json))
-    }
-
-    fun parseOnCallMessages(json: String): List<OnCallMessageDto> {
-        return JSONArray(json).mapObjects(::parseOnCallMessage)
-    }
-
-    fun parseOnCallMessage(json: String): OnCallMessageDto {
-        return parseOnCallMessage(JSONObject(json))
-    }
-
     fun parseTabManifest(obj: JSONObject): TabManifest {
         return TabManifest(
             id = obj.optString("id"),
@@ -198,53 +144,6 @@ object OpenJsonParser {
             sortOrder = obj.optInt("sortOrder", Int.MAX_VALUE),
             extension = parseExtension(obj.optJSONObject("extension")),
             extraConfig = obj.optJSONObject("extraConfig").toStringMap()
-        )
-    }
-
-    private fun parseApprovalItem(item: JSONObject): ApprovalItemDto {
-        return ApprovalItemDto(
-            id = item.optString("id"),
-            title = item.optString("title"),
-            applicant = item.optString("applicant"),
-            status = item.optString("status"),
-            createdAt = item.optString("createdAt"),
-            amount = item.optNullableInt("amount"),
-            reason = item.optString("reason").ifBlank { null },
-            comment = item.optString("comment").ifBlank { null },
-            updatedAt = item.optString("updatedAt").ifBlank { null }
-        )
-    }
-
-    private fun parseCalendarEvent(item: JSONObject): CalendarEventDto {
-        return CalendarEventDto(
-            id = item.optString("id"),
-            title = item.optString("title"),
-            description = item.optString("description").ifBlank { null },
-            startTime = item.optString("startTime"),
-            endTime = item.optString("endTime"),
-            location = item.optString("location").ifBlank { null },
-            participants = item.optJSONArray("participants").toStringList()
-        )
-    }
-
-    private fun parseOnCallSession(item: JSONObject): OnCallSessionDto {
-        return OnCallSessionDto(
-            sessionId = item.optString("sessionId"),
-            title = item.optString("title"),
-            createdAt = item.optString("createdAt"),
-            updatedAt = item.optString("updatedAt").ifBlank { null },
-            messageCount = item.optNullableInt("messageCount")
-        )
-    }
-
-    private fun parseOnCallMessage(item: JSONObject): OnCallMessageDto {
-        return OnCallMessageDto(
-            messageId = item.optString("messageId"),
-            sessionId = item.optString("sessionId"),
-            role = item.optString("role"),
-            content = item.optString("content"),
-            contentType = item.optString("contentType"),
-            createdAt = item.optString("createdAt")
         )
     }
 
@@ -335,14 +234,6 @@ object OpenJsonParser {
         }
         return List(length()) { index ->
             mapper(optJSONObject(index) ?: JSONObject())
-        }
-    }
-
-    private fun JSONObject.optNullableInt(name: String): Int? {
-        return if (has(name) && !isNull(name)) {
-            optInt(name)
-        } else {
-            null
         }
     }
 
