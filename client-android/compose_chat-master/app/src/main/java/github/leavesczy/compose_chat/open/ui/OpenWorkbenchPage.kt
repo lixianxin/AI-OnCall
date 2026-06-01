@@ -17,9 +17,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Group
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -41,6 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import github.leavesczy.compose_chat.open.model.CreateCustomWebTabRequest
+import github.leavesczy.compose_chat.open.repository.OpenBusinessRepository
+import github.leavesczy.compose_chat.open.model.UpdateCustomWebTabRequest
 import github.leavesczy.compose_chat.open.network.OpenApiResult
 import github.leavesczy.compose_chat.open.repository.OpenTabRepository
 import github.leavesczy.compose_chat.open.tab.OpenTabItem
@@ -79,16 +82,16 @@ fun OpenWorkbenchPage(
             onRefresh = onRefreshTabs
         )
         WorkbenchTeamLine()
-        ContainerInsightCard()
         WorkbenchSummary(openTabs = businessTabs)
         if (manageMode) {
             TabManagePanel(
                 openTabs = businessTabs,
                 repository = repository,
+                businessRepository = remember { OpenBusinessRepository() },
                 onRefreshTabs = onRefreshTabs
             )
         } else {
-            SectionTitle(title = "服务端下发的业务 Tab")
+            SectionTitle(title = "业务应用")
             WorkbenchGrid(
                 businessTabs = businessTabs,
                 onClickOpenTab = onClickOpenTab
@@ -120,7 +123,7 @@ private fun WorkbenchHeader(
                 color = Color(color = 0xFF111827)
             )
             Text(
-                text = "服务端下发业务 Tab，容器动态承载。",
+                text = "团队应用与待办入口。",
                 fontSize = 14.sp,
                 lineHeight = 18.sp,
                 color = Color(color = 0xFF6B7280)
@@ -187,33 +190,6 @@ private fun HeaderIconButton(
 }
 
 @Composable
-private fun ContainerInsightCard() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(size = 14.dp))
-            .background(color = Color(color = 0xFFEFF6FF))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(space = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            modifier = Modifier.size(size = 20.dp),
-            imageVector = Icons.Rounded.Info,
-            contentDescription = null,
-            tint = Color(color = 0xFF2563EB)
-        )
-        Text(
-            modifier = Modifier.weight(weight = 1f),
-            text = "TabDefinition 驱动展示：客户端负责权限、版本、入口类型和交互状态。",
-            fontSize = 13.sp,
-            lineHeight = 17.sp,
-            color = Color(color = 0xFF1D4ED8)
-        )
-    }
-}
-
-@Composable
 private fun WorkbenchSummary(openTabs: List<OpenTabItem>) {
     Row(
         modifier = Modifier
@@ -222,17 +198,17 @@ private fun WorkbenchSummary(openTabs: List<OpenTabItem>) {
     ) {
         SummaryCell(
             modifier = Modifier.weight(weight = 1f),
-            label = "已启用",
+            label = "应用",
             value = openTabs.size.toString()
         )
         SummaryCell(
             modifier = Modifier.weight(weight = 1f),
-            label = "可打开",
+            label = "可用",
             value = openTabs.count { it.openState == OpenTabState.Openable }.toString()
         )
         SummaryCell(
             modifier = Modifier.weight(weight = 1f),
-            label = "受限",
+            label = "需处理",
             value = openTabs.count { it.openState != OpenTabState.Openable }.toString()
         )
     }
@@ -273,7 +249,7 @@ private fun WorkbenchGrid(
     onClickOpenTab: (OpenTabItem) -> Unit
 ) {
     if (businessTabs.isEmpty()) {
-        InfoBanner(text = "当前还没有可展示的业务 Tab，请刷新或进入管理模式添加内置 Tab。")
+        InfoBanner(text = "当前还没有可展示的业务应用，请刷新或进入管理模式添加入口。")
         return
     }
     businessTabs.chunked(size = 2).forEach { rowTabs ->
@@ -338,13 +314,9 @@ private fun WorkbenchItem(
             openState = tab.openState
         )
         Text(
-            modifier = Modifier
-                .clip(shape = RoundedCornerShape(size = 999.dp))
-                .background(color = Color(color = 0xFFF3F4F6))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            text = tab.source.toDisplayText(),
-            fontSize = 11.sp,
-            lineHeight = 13.sp,
+            text = tab.toWorkbenchDescription(),
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
             color = Color(color = 0xFF6B7280)
         )
     }
@@ -384,6 +356,7 @@ private fun StateBadge(
 private fun TabManagePanel(
     openTabs: List<OpenTabItem>,
     repository: OpenTabRepository,
+    businessRepository: OpenBusinessRepository,
     onRefreshTabs: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -439,6 +412,21 @@ private fun TabManagePanel(
                             }
                         }
                     }
+                },
+                extraActions = if (tab.isEditableCustomWebTab()) {
+                    {
+                        CustomTabInlineEditor(
+                            tab = tab,
+                            repository = repository,
+                            onChanged = {
+                                actionMessage = it
+                                onRefreshTabs()
+                                refreshCatalog()
+                            }
+                        )
+                    }
+                } else {
+                    null
                 }
             )
         }
@@ -472,7 +460,7 @@ private fun TabManagePanel(
                 }
             )
         }
-        SectionTitle(title = "自定义网页 Tab")
+        SectionTitle(title = "新增自定义网页 Tab")
         CustomWebTabForm(
             repository = repository,
             onCreated = {
@@ -484,6 +472,91 @@ private fun TabManagePanel(
                 actionMessage = message
             }
         )
+        SectionTitle(title = "接口调试")
+        DebugProtocolPanel(repository = businessRepository)
+    }
+}
+
+@Composable
+private fun DebugProtocolPanel(repository: OpenBusinessRepository) {
+    val scope = rememberCoroutineScope()
+    var permissionsText by remember { mutableStateOf("点击加载服务端权限列表") }
+    var sampleTabsText by remember { mutableStateOf("点击加载示例 TabManifest") }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(size = 8.dp))
+            .background(color = AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(space = 10.dp)
+    ) {
+        Text(
+            text = "用于和服务端协议对齐：权限码来自 /debug/permissions，示例 Tab 来自 /debug/sample-tabs。",
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(space = 8.dp)) {
+            SmallActionButton(
+                text = "权限列表",
+                onClick = {
+                    scope.launch {
+                        permissionsText = when (val result = repository.debugPermissions()) {
+                            is OpenApiResult.Success -> result.data.joinToString(separator = "\n") { item ->
+                                "${item.code}：${item.description}"
+                            }.ifBlank { "服务端未返回权限数据" }
+
+                            is OpenApiResult.Failed -> "权限列表加载失败：${result.message}"
+                        }
+                    }
+                }
+            )
+            SmallActionButton(
+                text = "示例 Tab",
+                onClick = {
+                    scope.launch {
+                        sampleTabsText = when (val result = repository.debugSampleTabs()) {
+                            is OpenApiResult.Success -> result.data.joinToString(separator = "\n") { tab ->
+                                "${tab.id} · ${tab.displayName} · ${tab.entryType} · ${tab.route}"
+                            }.ifBlank { "服务端未返回示例 Tab" }
+
+                            is OpenApiResult.Failed -> "示例 Tab 加载失败：${result.message}"
+                        }
+                    }
+                }
+            )
+        }
+        DebugTextBlock(title = "权限码", body = permissionsText)
+        DebugTextBlock(title = "示例 TabManifest", body = sampleTabsText)
+    }
+}
+
+@Composable
+private fun DebugTextBlock(
+    title: String,
+    body: String
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(size = 8.dp))
+            .background(color = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color)
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(space = 5.dp)
+    ) {
+        Text(
+            text = title,
+            fontSize = 13.sp,
+            lineHeight = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+        )
+        Text(
+            text = body,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+        )
     }
 }
 
@@ -492,46 +565,148 @@ private fun ManageTabRow(
     tab: OpenTabItem,
     actionText: String,
     actionEnabled: Boolean,
-    onAction: () -> Unit
+    onAction: () -> Unit,
+    extraActions: (@Composable () -> Unit)? = null
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape = RoundedCornerShape(size = 8.dp))
             .background(color = AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color)
             .padding(horizontal = 12.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(space = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(space = 10.dp)
     ) {
-        Icon(
-            modifier = Modifier.size(size = 22.dp),
-            imageVector = tab.icon,
-            contentDescription = null,
-            tint = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color
-        )
-        Column(
-            modifier = Modifier.weight(weight = 1f),
-            verticalArrangement = Arrangement.spacedBy(space = 3.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(space = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = tab.displayName,
-                fontSize = 15.sp,
-                lineHeight = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+            Icon(
+                modifier = Modifier.size(size = 22.dp),
+                imageVector = tab.icon,
+                contentDescription = null,
+                tint = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color
             )
-            Text(
-                text = "${tab.manifest.entryType} · ${tab.openState.toWorkbenchStateText()}",
-                fontSize = 12.sp,
-                lineHeight = 15.sp,
-                color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+            Column(
+                modifier = Modifier.weight(weight = 1f),
+                verticalArrangement = Arrangement.spacedBy(space = 3.dp)
+            ) {
+                Text(
+                    text = tab.displayName,
+                    fontSize = 15.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+                )
+                Text(
+                    text = "${tab.manifest.entryType} · ${tab.openState.toWorkbenchStateText()}",
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+                )
+            }
+            SmallActionButton(
+                text = actionText,
+                enabled = actionEnabled,
+                onClick = onAction
             )
         }
-        SmallActionButton(
-            text = actionText,
-            enabled = actionEnabled,
-            onClick = onAction
-        )
+        extraActions?.invoke()
+    }
+}
+
+@Composable
+private fun CustomTabInlineEditor(
+    tab: OpenTabItem,
+    repository: OpenTabRepository,
+    onChanged: (String) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var editing by remember(tab.id) { mutableStateOf(false) }
+    var displayName by remember(tab.id) { mutableStateOf(tab.displayName) }
+    var description by remember(tab.id) { mutableStateOf(tab.manifest.description.orEmpty()) }
+    var entryUri by remember(tab.id) { mutableStateOf(tab.manifest.entryUri.orEmpty()) }
+    var icon by remember(tab.id) { mutableStateOf(tab.manifest.icon ?: "docs") }
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    if (!editing) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(space = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SmallIconTextButton(
+                icon = Icons.Rounded.Edit,
+                text = "编辑",
+                onClick = { editing = true }
+            )
+            SmallIconTextButton(
+                icon = Icons.Rounded.Delete,
+                text = "删除配置",
+                destructive = true,
+                onClick = {
+                    scope.launch {
+                        when (val result = repository.deleteCustomTab(tabId = tab.id)) {
+                            is OpenApiResult.Success -> onChanged("已删除 ${tab.displayName}")
+                            is OpenApiResult.Failed -> onChanged("删除失败：${result.message}")
+                        }
+                    }
+                }
+            )
+        }
+        return
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(space = 8.dp)
+    ) {
+        ManageTextField(value = displayName, label = "Tab 名称", onValueChange = { displayName = it })
+        ManageTextField(value = description, label = "描述", onValueChange = { description = it })
+        ManageTextField(value = entryUri, label = "网页地址（http/https）", onValueChange = { entryUri = it.trim() })
+        Box {
+            SmallActionButton(text = "图标：$icon", onClick = { menuExpanded = true })
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                listOf("docs", "web", "approval", "calendar", "finance").forEach { item ->
+                    DropdownMenuItem(
+                        text = { Text(text = item) },
+                        onClick = {
+                            icon = item
+                            menuExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(space = 8.dp)
+        ) {
+            SmallActionButton(
+                text = "保存修改",
+                enabled = displayName.isNotBlank() && entryUri.isWebUrl(),
+                onClick = {
+                    scope.launch {
+                        val request = UpdateCustomWebTabRequest(
+                            displayName = displayName.trim(),
+                            description = description.trim().ifBlank { "用户自定义网页 Tab" },
+                            icon = icon,
+                            entryUri = entryUri.trim(),
+                            sortOrder = tab.manifest.sortOrder.takeIf { it != Int.MAX_VALUE }
+                        )
+                        when (val result = repository.updateCustomWebTab(tabId = tab.id, request = request)) {
+                            is OpenApiResult.Success -> {
+                                editing = false
+                                onChanged("已更新 ${result.data.tab?.displayName ?: displayName}")
+                            }
+
+                            is OpenApiResult.Failed -> onChanged("更新失败：${result.message}")
+                        }
+                    }
+                }
+            )
+            SmallActionButton(text = "取消", onClick = { editing = false })
+        }
     }
 }
 
@@ -557,7 +732,7 @@ private fun CustomWebTabForm(
         verticalArrangement = Arrangement.spacedBy(space = 10.dp)
     ) {
         Text(
-            text = "第一版自定义 Tab 只支持网页入口。服务端 `POST /tabs` 当前尚未上线，提交失败时会展示接口状态。",
+            text = "第一版自定义 Tab 只支持网页入口。保存后会调用服务端 `POST /tabs`，并默认启用到当前账号。",
             fontSize = 12.sp,
             lineHeight = 16.sp,
             color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
@@ -608,13 +783,7 @@ private fun CustomWebTabForm(
                         }
 
                         is OpenApiResult.Failed -> {
-                            onMessage(
-                                if (result.code == "UNKNOWN_ERROR" && result.message.contains("404")) {
-                                    "服务端暂未开放自定义 Tab 创建接口"
-                                } else {
-                                    "创建失败：${result.message}"
-                                }
-                            )
+                            onMessage("创建失败：${result.message}")
                         }
                     }
                 }
@@ -744,6 +913,48 @@ private fun SmallActionButton(
     }
 }
 
+@Composable
+private fun SmallIconTextButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    destructive: Boolean = false,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(shape = RoundedCornerShape(size = 8.dp))
+            .background(
+                color = if (destructive) {
+                    Color(color = 0xFFFEF2F2)
+                } else {
+                    AppTheme.colorScheme.c_FFFFFFFF_FF101010.color
+                }
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.spacedBy(space = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val color = if (destructive) {
+            Color(color = 0xFFB91C1C)
+        } else {
+            AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color
+        }
+        Icon(
+            modifier = Modifier.size(size = 16.dp),
+            imageVector = icon,
+            contentDescription = null,
+            tint = color
+        )
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            lineHeight = 14.sp,
+            color = color
+        )
+    }
+}
+
 private fun OpenTabState.toWorkbenchStateText(): String {
     return when (this) {
         OpenTabState.Openable -> "可打开"
@@ -753,6 +964,16 @@ private fun OpenTabState.toWorkbenchStateText(): String {
         OpenTabState.RouteUnsupported -> "路由不支持"
         OpenTabState.EntryUnsupported -> "入口不支持"
         OpenTabState.InvalidConfig -> "配置异常"
+    }
+}
+
+private fun OpenTabItem.toWorkbenchDescription(): String {
+    return when (manifest.route) {
+        "/approval" -> "查看待处理审批与审批记录"
+        "/calendar" -> "查看团队日程安排"
+        "/finance" -> "查看财务相关信息"
+        "/ai-oncall" -> "咨询接入、接口和配置问题"
+        else -> manifest.description.orEmpty().ifBlank { "点击打开业务应用" }
     }
 }
 
@@ -773,4 +994,10 @@ private fun String.toSlug(): String {
         .replace(Regex("[^a-z0-9]+"), "-")
         .trim('-')
     return normalized.ifBlank { "web" }
+}
+
+private fun OpenTabItem.isEditableCustomWebTab(): Boolean {
+    return manifest.entryType == github.leavesczy.compose_chat.open.model.EntryType.Web &&
+        source == OpenTabSource.Remote &&
+        id.startsWith("custom-")
 }
