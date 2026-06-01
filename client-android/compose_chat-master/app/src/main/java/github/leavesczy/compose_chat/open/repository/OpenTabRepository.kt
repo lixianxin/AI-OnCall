@@ -6,6 +6,7 @@ import github.leavesczy.compose_chat.open.model.CreateCustomWebTabRequest
 import github.leavesczy.compose_chat.open.model.SuccessResponse
 import github.leavesczy.compose_chat.open.model.TabManifest
 import github.leavesczy.compose_chat.open.model.TabMutationResponse
+import github.leavesczy.compose_chat.open.model.UpdateCustomWebTabRequest
 import github.leavesczy.compose_chat.open.network.OpenApiClient
 import github.leavesczy.compose_chat.open.network.OpenApiResult
 import github.leavesczy.compose_chat.open.network.OpenJsonParser
@@ -50,6 +51,25 @@ class OpenTabRepository(
             .put("entryUri", request.entryUri)
             .put("minContainerVersion", request.minContainerVersion)
         return apiClient.postJson(path = "/tabs", json = body).map(OpenJsonParser::parseTabMutation)
+    }
+
+    suspend fun updateCustomWebTab(
+        tabId: String,
+        request: UpdateCustomWebTabRequest
+    ): OpenApiResult<TabMutationResponse> {
+        val body = JSONObject()
+            .put("displayName", request.displayName)
+            .put("description", request.description)
+            .put("icon", request.icon)
+            .put("entryUri", request.entryUri)
+        request.sortOrder?.let { sortOrder ->
+            body.put("sortOrder", sortOrder)
+        }
+        return apiClient.putJson(path = "/tabs/$tabId", json = body).map(OpenJsonParser::parseTabMutation)
+    }
+
+    suspend fun deleteCustomTab(tabId: String): OpenApiResult<SuccessResponse> {
+        return apiClient.delete(path = "/tabs/$tabId").map(OpenJsonParser::parseSuccess)
     }
 
     suspend fun getApprovalSummary(): OpenApiResult<ApprovalSummaryResponse> {

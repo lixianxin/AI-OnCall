@@ -23,7 +23,6 @@ import github.leavesczy.compose_chat.proxy.ConversationProvider
 import github.leavesczy.compose_chat.ui.base.BaseViewModel
 import github.leavesczy.compose_chat.ui.login.LoginActivity
 import github.leavesczy.compose_chat.ui.preview.PreviewImageActivity
-import github.leavesczy.compose_chat.ui.profile.ProfileUpdateActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -58,6 +57,11 @@ class MainViewModel : BaseViewModel() {
             selectedTab = MainPageTab.Workbench,
             selectedOpenTabId = null,
             openTabs = emptyList(),
+            onCallRouteKey = 0L,
+            onCallSessionId = null,
+            onCallSessionTitle = null,
+            onCallInitialPrompt = null,
+            onCallForceNewSession = false,
             unreadMessageCount = 0L,
             onClickTab = ::onClickTab,
             onClickOpenTab = ::onClickOpenTab
@@ -132,12 +136,9 @@ class MainViewModel : BaseViewModel() {
     private fun onClickTab(mainPageTab: MainPageTab) {
         val viewState = bottomBarViewState
         if (mainPageTab == MainPageTab.AiOncall) {
-            val oncallTab = viewState.openTabs.firstOrNull { tab ->
-                tab.id == OPEN_TAB_AI_ONCALL
-            }
             bottomBarViewState = viewState.copy(
                 selectedTab = mainPageTab,
-                selectedOpenTabId = oncallTab?.id
+                selectedOpenTabId = null
             )
             return
         }
@@ -158,7 +159,11 @@ class MainViewModel : BaseViewModel() {
                 } else {
                     MainPageTab.Workbench
                 },
-                selectedOpenTabId = openTabItem.id
+                selectedOpenTabId = if (openTabItem.id == OPEN_TAB_AI_ONCALL) {
+                    null
+                } else {
+                    openTabItem.id
+                }
             )
         }
     }
@@ -168,6 +173,36 @@ class MainViewModel : BaseViewModel() {
         bottomBarViewState = viewState.copy(
             selectedTab = MainPageTab.Workbench,
             selectedOpenTabId = null
+        )
+    }
+
+    fun openOnCallChat(
+        sessionId: String? = null,
+        sessionTitle: String? = null,
+        initialPrompt: String? = null,
+        forceNewSession: Boolean = false
+    ) {
+        val viewState = bottomBarViewState
+        bottomBarViewState = viewState.copy(
+            selectedTab = MainPageTab.AiOncall,
+            selectedOpenTabId = OPEN_TAB_AI_ONCALL,
+            onCallRouteKey = viewState.onCallRouteKey + 1,
+            onCallSessionId = sessionId,
+            onCallSessionTitle = sessionTitle,
+            onCallInitialPrompt = initialPrompt,
+            onCallForceNewSession = forceNewSession
+        )
+    }
+
+    fun backToOnCallHome() {
+        val viewState = bottomBarViewState
+        bottomBarViewState = viewState.copy(
+            selectedTab = MainPageTab.AiOncall,
+            selectedOpenTabId = null,
+            onCallSessionId = null,
+            onCallSessionTitle = null,
+            onCallInitialPrompt = null,
+            onCallForceNewSession = false
         )
     }
 
@@ -289,7 +324,13 @@ class MainViewModel : BaseViewModel() {
     }
 
     private fun updateProfile() {
-        context.startActivity<ProfileUpdateActivity>()
+        bottomBarViewState = bottomBarViewState.copy(
+            selectedTab = MainPageTab.Person,
+            selectedOpenTabId = null
+        )
+        viewModelScope.launch {
+            drawerViewState.drawerState.close()
+        }
     }
 
     private fun previewImage(imageUrl: String) {

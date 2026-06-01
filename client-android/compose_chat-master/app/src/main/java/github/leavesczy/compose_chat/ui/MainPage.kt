@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import github.leavesczy.compose_chat.open.ui.OpenOnCallHomePage
+import github.leavesczy.compose_chat.open.ui.OpenOnCallPage
 import github.leavesczy.compose_chat.open.ui.OpenProfilePage
 import github.leavesczy.compose_chat.open.ui.OpenTabContentHost
 import github.leavesczy.compose_chat.open.ui.OpenWorkbenchPage
@@ -48,7 +51,10 @@ fun MainPage(
                 contentWindowInsets = WindowInsets(),
                 containerColor = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color,
                 bottomBar = {
-                    if (mainViewModel.bottomBarViewState.selectedTab != MainPageTab.AiOncall) {
+                    val bottomBarViewState = mainViewModel.bottomBarViewState
+                    val inOnCallChat = bottomBarViewState.selectedTab == MainPageTab.AiOncall &&
+                        bottomBarViewState.selectedOpenTabId == "ai-oncall"
+                    if (!inOnCallChat) {
                         MainPageBottomBar(viewState = mainViewModel.bottomBarViewState)
                     }
                 }
@@ -63,7 +69,19 @@ fun MainPage(
                     val selectedOpenTab = bottomBarViewState.openTabs.firstOrNull { tab ->
                         tab.id == bottomBarViewState.selectedOpenTabId
                     }
-                    if (selectedOpenTab != null) {
+                    if (bottomBarViewState.selectedTab == MainPageTab.AiOncall &&
+                        bottomBarViewState.selectedOpenTabId == "ai-oncall"
+                    ) {
+                        key(bottomBarViewState.onCallRouteKey) {
+                            OpenOnCallPage(
+                                initialSessionId = bottomBarViewState.onCallSessionId,
+                                initialSessionTitle = bottomBarViewState.onCallSessionTitle,
+                                initialPrompt = bottomBarViewState.onCallInitialPrompt,
+                                forceNewSession = bottomBarViewState.onCallForceNewSession,
+                                onBackToOnCallHome = mainViewModel::backToOnCallHome
+                            )
+                        }
+                    } else if (selectedOpenTab != null) {
                         OpenTabContentHost(
                             tab = selectedOpenTab,
                             onBackToWorkbench = if (bottomBarViewState.selectedTab == MainPageTab.Workbench) {
@@ -91,10 +109,8 @@ fun MainPage(
                             }
 
                             MainPageTab.AiOncall -> {
-                                OpenTabContentHost(
-                                    tab = bottomBarViewState.openTabs.firstOrNull { tab ->
-                                        tab.id == "ai-oncall"
-                                    }
+                                OpenOnCallHomePage(
+                                    onOpenChat = mainViewModel::openOnCallChat
                                 )
                             }
 
