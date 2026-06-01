@@ -146,13 +146,7 @@ class LoginViewModel : BaseViewModel() {
                 }
 
                 is OpenApiResult.Failed -> {
-                    showToast(
-                        msg = if (result.code == "HTTP_ERROR" && result.message.contains("404")) {
-                            "注册接口暂未开放，请先使用演示账号登录"
-                        } else {
-                            result.message
-                        }
-                    )
+                    showToast(msg = result.message)
                 }
             }
             dismissLoadingDialog()
