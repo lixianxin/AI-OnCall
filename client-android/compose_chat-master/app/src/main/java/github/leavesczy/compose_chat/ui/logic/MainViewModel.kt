@@ -1,13 +1,10 @@
 package github.leavesczy.compose_chat.ui.logic
 
 import android.content.Intent
-import androidx.compose.material3.DrawerState
-import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewModelScope
-import github.leavesczy.compose_chat.base.models.PersonProfile
 import github.leavesczy.compose_chat.base.models.ServerConnectState
 import github.leavesczy.compose_chat.base.provider.IConversationProvider
 import github.leavesczy.compose_chat.open.model.DebugStatusResponse
@@ -23,7 +20,6 @@ import github.leavesczy.compose_chat.proxy.ConversationProvider
 import github.leavesczy.compose_chat.ui.base.BaseViewModel
 import github.leavesczy.compose_chat.ui.login.LoginActivity
 import github.leavesczy.compose_chat.ui.preview.PreviewImageActivity
-import github.leavesczy.compose_chat.ui.profile.ProfileUpdateActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -49,31 +45,19 @@ class MainViewModel : BaseViewModel() {
 
     val serverConnectState: SharedFlow<ServerConnectState> = _serverConnectState
 
-    val topBarViewState = MainPageTopBarViewState(
-        openDrawer = ::openDrawer
-    )
-
     var bottomBarViewState by mutableStateOf(
         value = MainPageBottomBarViewState(
             selectedTab = MainPageTab.Workbench,
             selectedOpenTabId = null,
             openTabs = emptyList(),
+            onCallRouteKey = 0L,
+            onCallSessionId = null,
+            onCallSessionTitle = null,
+            onCallInitialPrompt = null,
+            onCallForceNewSession = false,
             unreadMessageCount = 0L,
             onClickTab = ::onClickTab,
             onClickOpenTab = ::onClickOpenTab
-        )
-    )
-        private set
-
-    var drawerViewState by mutableStateOf(
-        value = MainPageDrawerViewState(
-            drawerState = DrawerState(initialValue = DrawerValue.Closed),
-            appTheme = AppThemeProvider.appTheme,
-            personProfile = ComposeChat.accountProvider.personProfileFlow.value,
-            previewImage = ::previewImage,
-            switchTheme = ::switchTheme,
-            logout = ::logout,
-            updateProfile = ::updateProfile
         )
     )
         private set
@@ -132,19 +116,19 @@ class MainViewModel : BaseViewModel() {
     private fun onClickTab(mainPageTab: MainPageTab) {
         val viewState = bottomBarViewState
         if (mainPageTab == MainPageTab.AiOncall) {
-            val oncallTab = viewState.openTabs.firstOrNull { tab ->
-                tab.id == OPEN_TAB_AI_ONCALL
-            }
             bottomBarViewState = viewState.copy(
                 selectedTab = mainPageTab,
-                selectedOpenTabId = oncallTab?.id
+                selectedOpenTabId = if (viewState.selectedOpenTabId == OPEN_TAB_AI_ONCALL) {
+                    null
+                } else {
+                    viewState.selectedOpenTabId
+                }
             )
             return
         }
-        if (viewState.selectedTab != mainPageTab || viewState.selectedOpenTabId != null) {
+        if (viewState.selectedTab != mainPageTab) {
             bottomBarViewState = viewState.copy(
-                selectedTab = mainPageTab,
-                selectedOpenTabId = null
+                selectedTab = mainPageTab
             )
         }
     }
@@ -158,7 +142,11 @@ class MainViewModel : BaseViewModel() {
                 } else {
                     MainPageTab.Workbench
                 },
-                selectedOpenTabId = openTabItem.id
+                selectedOpenTabId = if (openTabItem.id == OPEN_TAB_AI_ONCALL) {
+                    null
+                } else {
+                    openTabItem.id
+                }
             )
         }
     }
@@ -171,8 +159,42 @@ class MainViewModel : BaseViewModel() {
         )
     }
 
+    fun openOnCallChat(
+        sessionId: String? = null,
+        sessionTitle: String? = null,
+        initialPrompt: String? = null,
+        forceNewSession: Boolean = false
+    ) {
+        val viewState = bottomBarViewState
+        bottomBarViewState = viewState.copy(
+            selectedTab = MainPageTab.AiOncall,
+            selectedOpenTabId = OPEN_TAB_AI_ONCALL,
+            onCallRouteKey = viewState.onCallRouteKey + 1,
+            onCallSessionId = sessionId,
+            onCallSessionTitle = sessionTitle,
+            onCallInitialPrompt = initialPrompt,
+            onCallForceNewSession = forceNewSession
+        )
+    }
+
+    fun backToOnCallHome() {
+        val viewState = bottomBarViewState
+        bottomBarViewState = viewState.copy(
+            selectedTab = MainPageTab.AiOncall,
+            selectedOpenTabId = null,
+            onCallSessionId = null,
+            onCallSessionTitle = null,
+            onCallInitialPrompt = null,
+            onCallForceNewSession = false
+        )
+    }
+
     private fun loadOpenTabs() {
         viewModelScope.launch {
+            val meResult = openAuthRepository.me()
+            if (meResult is OpenApiResult.Success) {
+                openMe = meResult.data
+            }
             val remoteTabs = openTabRepository.getRemoteTabs()
             val openTabs = when (remoteTabs) {
                 is OpenApiResult.Success -> {
@@ -254,11 +276,8 @@ class MainViewModel : BaseViewModel() {
         }
     }
 
-    private fun onPersonProfileChanged(personProfile: PersonProfile) {
-        val viewState = drawerViewState
-        if (drawerViewState.personProfile != personProfile) {
-            drawerViewState = viewState.copy(personProfile = personProfile)
-        }
+    private fun onPersonProfileChanged(personProfile: github.leavesczy.compose_chat.base.models.PersonProfile) {
+        // 当前产品形态不再展示左侧抽屉；保留订阅以维持原 demo 数据刷新链路。
     }
 
     private fun logout() {
@@ -266,6 +285,12 @@ class MainViewModel : BaseViewModel() {
             showLoadingDialog()
             // 当前主登录态是训练营服务端 token。退出时先清理服务端 session；
             // 腾讯 IM 仍作为原 demo 兼容能力，尝试退出但不让它阻塞主流程。
+            when (val result = openAuthRepository.logout()) {
+                is OpenApiResult.Success -> Unit
+                is OpenApiResult.Failed -> {
+                    showToast(msg = "服务端退出失败，已清理本地登录态：${result.message}")
+                }
+            }
             OpenSessionManager.clear()
             AccountProvider.onUserLogout()
             runCatching {
@@ -284,31 +309,10 @@ class MainViewModel : BaseViewModel() {
         context.startActivity(intent)
     }
 
-    private suspend fun openDrawer() {
-        drawerViewState.drawerState.open()
-    }
-
     private fun updateProfile() {
-        context.startActivity<ProfileUpdateActivity>()
-    }
-
-    private fun previewImage(imageUrl: String) {
-        if (imageUrl.isNotBlank()) {
-            PreviewImageActivity.navTo(context = context, imageUri = imageUrl)
-        }
-    }
-
-    private fun switchTheme() {
-        val nextTheme = AppThemeProvider.appTheme.nextTheme()
-        drawerViewState = drawerViewState.copy(appTheme = nextTheme)
-        AppThemeProvider.onAppThemeChanged(appTheme = nextTheme)
-    }
-
-    private fun AppTheme.nextTheme(): AppTheme {
-        val values = AppTheme.entries
-        return values.getOrElse(ordinal + 1) {
-            values[0]
-        }
+        bottomBarViewState = bottomBarViewState.copy(
+            selectedTab = MainPageTab.Person
+        )
     }
 
     private companion object {

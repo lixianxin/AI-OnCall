@@ -34,6 +34,9 @@ data class LoginResponse(
 data class MeResponse(
     val userId: String,
     val displayName: String,
+    val globalRole: String?,
+    val currentTeamId: String?,
+    val memberships: List<OpenTeamMembership>,
     val permissions: List<String>,
     val team: TeamDto?
 )
