@@ -84,9 +84,6 @@ fun OpenProfilePage(
             ErrorCard(viewState = viewState)
         }
         AccountSummaryCard(viewState = viewState)
-        BusinessSummaryCard(viewState = viewState)
-        PermissionCard(permissions = viewState.permissions)
-        CollapsibleDebugInfoCard(viewState = viewState)
         ActionCard(viewState = viewState)
     }
 }
@@ -119,7 +116,7 @@ private fun ProfileHeader(
             horizontalAlignment = Alignment.Start
         ) {
             Text(
-                text = viewState.displayName,
+                text = viewState.realDisplayName(),
                 fontSize = 22.sp,
                 lineHeight = 25.sp,
                 fontWeight = FontWeight.Bold,
@@ -233,6 +230,7 @@ private fun AccountSummaryCard(viewState: OpenProfileViewState) {
     SectionCard(title = "账号状态") {
         InfoRow(label = "服务连接", value = viewState.serviceStatus, iconSuccess = true)
         InfoRow(label = "团队", value = viewState.teamName)
+        InfoRow(label = "角色", value = viewState.roleName)
         if (viewState.serverTime != "-") {
             InfoRow(label = "同步时间", value = viewState.serverTime)
         }
@@ -465,10 +463,61 @@ private fun PermissionChip(permission: String) {
 
 private fun String.toDisplayPermissionName(): String {
     return when (this) {
+        "team.manage" -> "团队管理"
+        "team.all.read" -> "全部团队"
+        "team.member.read" -> "团队成员"
+        "tab.company.read" -> "公司介绍"
+        "tab.announcement.read" -> "公告"
+        "tab.announcement.write" -> "公告发布"
+        "tab.fun.read" -> "放松一刻"
         "tab.approval.read" -> "审批"
+        "tab.approval.create" -> "发起审批"
+        "tab.approval.approve" -> "处理审批"
+        "tab.approval.all" -> "全部审批"
         "tab.calendar.read" -> "日程"
+        "tab.calendar.create" -> "创建日程"
+        "tab.calendar.manage" -> "管理日程"
+        "tab.calendar.all" -> "全部日程"
+        "tab.admin.manage" -> "权限管理"
+        "tab.debug.read" -> "调试"
         "tab.finance.read" -> "财务"
         "ai.oncall" -> "AI oncall"
         else -> "业务权限"
+    }
+}
+
+private fun OpenProfileViewState.realDisplayName(): String {
+    val seedName = userId.toDemoRealNameByUserId()
+    return when {
+        seedName != null && displayName.isSeedRoleName() -> seedName
+        seedName != null && displayName.isBlank() -> seedName
+        displayName.isNotBlank() -> displayName
+        seedName != null -> seedName
+        else -> "未命名用户"
+    }
+}
+
+private fun String.isSeedRoleName(): Boolean {
+    return this == "产品主管" ||
+        this == "产品员工" ||
+        this == "运营主管" ||
+        this == "运营员工" ||
+        this == "部门主管" ||
+        this == "普通员工" ||
+        this == "演示账号" ||
+        this == "系统管理员" ||
+        this == "训练营用户"
+}
+
+private fun String.toDemoRealNameByUserId(): String? {
+    return when (this) {
+        "user-admin" -> "陈明"
+        "user-demo" -> "林一凡"
+        "user-guest" -> "访客用户"
+        "user-product-manager" -> "王睿"
+        "user-product-employee" -> "张晨"
+        "user-operation-manager" -> "赵宁"
+        "user-operation-employee" -> "李晓"
+        else -> null
     }
 }

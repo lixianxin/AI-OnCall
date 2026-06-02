@@ -32,7 +32,8 @@ class OpenAuthRepository(
                 token = result.data.token,
                 userId = result.data.userId,
                 displayName = result.data.displayName,
-                permissions = result.data.permissions
+                permissions = result.data.permissions,
+                account = request.account
             )
         }
         return result
@@ -50,14 +51,28 @@ class OpenAuthRepository(
                 token = result.data.token,
                 userId = result.data.userId,
                 displayName = result.data.displayName,
-                permissions = result.data.permissions
+                permissions = result.data.permissions,
+                account = request.account
             )
         }
         return result
     }
 
+    suspend fun logout(): OpenApiResult<Boolean> {
+        return apiClient.postJson(path = "/auth/logout", json = JSONObject()).map { true }
+    }
+
     suspend fun me(): OpenApiResult<MeResponse> {
-        return apiClient.get(path = "/me").map(OpenJsonParser::parseMe)
+        val result = apiClient.get(path = "/me").map(OpenJsonParser::parseMe)
+        if (result is OpenApiResult.Success) {
+            sessionManager.saveSession(
+                token = sessionManager.token,
+                userId = result.data.userId,
+                displayName = result.data.displayName,
+                permissions = result.data.permissions
+            )
+        }
+        return result
     }
 
     suspend fun debugStatus(): OpenApiResult<DebugStatusResponse> {
