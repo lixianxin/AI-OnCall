@@ -20,20 +20,28 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Badge
-import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.Image
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -113,14 +121,45 @@ internal fun LoginPage(viewState: LoginPageViewState) {
                             }
                         }
                     )
-                    Text(
-                        text = "登录后获取团队权限与业务 Tab 配置",
-                        fontSize = 13.sp,
-                        lineHeight = 16.sp,
-                        color = Color(color = 0xFF6B7280)
-                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+internal fun LoginLaunchPage() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color)
+            .statusBarsPadding()
+            .navigationBarsPadding(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(space = 14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(shape = RoundedCornerShape(size = 28.dp))
+                    .padding(all = 2.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    modifier = Modifier.widthIn(max = 108.dp),
+                    painter = painterResource(id = R.drawable.open_app_icon),
+                    contentDescription = null
+                )
+            }
+            Text(
+                text = "让企业协作更简单",
+                fontSize = 18.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(color = 0xFF111827)
+            )
         }
     }
 }
@@ -134,15 +173,14 @@ private fun BrandHeader() {
     ) {
         Box(
             modifier = Modifier
-                .clip(shape = RoundedCornerShape(size = 20.dp))
-                .background(color = Color(color = 0xFF2563EB))
-                .padding(all = 18.dp),
+                .clip(shape = RoundedCornerShape(size = 24.dp))
+                .padding(all = 2.dp),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Rounded.FolderOpen,
-                contentDescription = null,
-                tint = Color.White
+            Image(
+                modifier = Modifier.widthIn(max = 84.dp),
+                painter = painterResource(id = R.drawable.open_app_icon),
+                contentDescription = null
             )
         }
         Text(
@@ -155,7 +193,7 @@ private fun BrandHeader() {
             )
         )
         Text(
-            text = "开发者接入与 AI oncall 助理",
+            text = "让企业协作更简单",
             fontSize = 16.sp,
             lineHeight = 20.sp,
             color = Color(color = 0xFF6B7280)
@@ -179,17 +217,11 @@ private fun LoginFormCard(
         horizontalAlignment = Alignment.Start
     ) {
         Text(
-            text = if (viewState.registerMode) "创建训练营账号" else "登录工作区",
+            text = if (viewState.registerMode) "创建账号" else "账号登录",
             fontSize = 20.sp,
             lineHeight = 24.sp,
             fontWeight = FontWeight.Bold,
             color = Color(color = 0xFF111827)
-        )
-        Text(
-            text = "使用服务端账号获取团队权限、TabManifest 和 AI 助手能力。",
-            fontSize = 13.sp,
-            lineHeight = 17.sp,
-            color = Color(color = 0xFF6B7280)
         )
         LoginTextField(
             modifier = Modifier.fillMaxWidth(),
@@ -198,21 +230,17 @@ private fun LoginFormCard(
             icon = Icons.Rounded.AccountCircle,
             onContentChange = viewState.onAccountInputChanged
         )
-        LoginTextField(
+        PasswordTextField(
             modifier = Modifier.fillMaxWidth(),
             content = viewState.password,
             label = stringResource(id = R.string.login_password),
-            icon = Icons.Rounded.Lock,
-            visualTransformation = PasswordVisualTransformation(),
             onContentChange = viewState.onPasswordInputChanged
         )
         if (viewState.registerMode) {
-            LoginTextField(
+            PasswordTextField(
                 modifier = Modifier.fillMaxWidth(),
                 content = viewState.registerPasswordConfirm,
                 label = "确认密码",
-                icon = Icons.Rounded.Lock,
-                visualTransformation = PasswordVisualTransformation(),
                 onContentChange = viewState.onRegisterPasswordConfirmInputChanged
             )
             LoginTextField(
@@ -263,6 +291,69 @@ private fun LoginTextField(
                 contentDescription = null,
                 tint = Color(color = 0xFF6B7280)
             )
+        },
+        trailingIcon = null,
+        label = {
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                lineHeight = 16.sp,
+                color = Color(color = 0xFF6B7280)
+            )
+        },
+        textStyle = TextStyle(
+            fontSize = 16.sp,
+            color = Color(color = 0xFF111827)
+        ),
+        shape = RoundedCornerShape(size = 12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            cursorColor = Color(color = 0xFF2563EB),
+            focusedBorderColor = Color(color = 0xFF2563EB),
+            unfocusedBorderColor = Color(color = 0xFFD1D5DB),
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White
+        )
+    )
+}
+
+@Composable
+private fun PasswordTextField(
+    modifier: Modifier,
+    content: TextFieldValue,
+    label: String,
+    onContentChange: (content: TextFieldValue) -> Unit
+) {
+    var passwordVisible by remember { mutableStateOf(value = false) }
+    OutlinedTextField(
+        modifier = modifier,
+        value = content,
+        onValueChange = onContentChange,
+        maxLines = 1,
+        singleLine = true,
+        visualTransformation = if (passwordVisible) {
+            VisualTransformation.None
+        } else {
+            PasswordVisualTransformation()
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Rounded.Lock,
+                contentDescription = null,
+                tint = Color(color = 0xFF6B7280)
+            )
+        },
+        trailingIcon = {
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                Icon(
+                    imageVector = if (passwordVisible) {
+                        Icons.Rounded.VisibilityOff
+                    } else {
+                        Icons.Rounded.Visibility
+                    },
+                    contentDescription = if (passwordVisible) "隐藏密码" else "显示密码",
+                    tint = Color(color = 0xFF6B7280)
+                )
+            }
         },
         label = {
             Text(

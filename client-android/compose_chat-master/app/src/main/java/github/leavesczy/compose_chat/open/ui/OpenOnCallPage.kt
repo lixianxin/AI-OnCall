@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,16 +27,20 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SmartToy
 import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,8 +54,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import github.leavesczy.compose_chat.open.model.OnCallSessionDto
@@ -59,6 +68,11 @@ import github.leavesczy.compose_chat.open.network.OpenApiResult
 import github.leavesczy.compose_chat.open.repository.OnCallStreamEvent
 import github.leavesczy.compose_chat.open.repository.OpenOnCallRepository
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 @Composable
@@ -75,6 +89,8 @@ fun OpenOnCallHomePage(
     var loading by remember { mutableStateOf(true) }
     var sessions by remember { mutableStateOf<List<OnCallSessionDto>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var pendingDeleteSession by remember { mutableStateOf<OnCallSessionDto?>(null) }
+    var deletingSessionId by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     fun loadSessions() {
@@ -98,6 +114,57 @@ fun OpenOnCallHomePage(
 
     LaunchedEffect(Unit) {
         loadSessions()
+    }
+
+    pendingDeleteSession?.let { session ->
+        AlertDialog(
+            onDismissRequest = {
+                if (deletingSessionId == null) {
+                    pendingDeleteSession = null
+                }
+            },
+            title = {
+                Text(text = "删除会话")
+            },
+            text = {
+                Text(text = "确定删除“${session.title.ifBlank { "未命名咨询" }}”吗？删除后无法在最近会话中继续查看。")
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = deletingSessionId == null,
+                    onClick = {
+                        deletingSessionId = session.sessionId
+                        scope.launch {
+                            when (val result = repository.deleteSession(sessionId = session.sessionId)) {
+                                is OpenApiResult.Success -> {
+                                    pendingDeleteSession = null
+                                    deletingSessionId = null
+                                    loadSessions()
+                                }
+
+                                is OpenApiResult.Failed -> {
+                                    errorMessage = "删除会话失败：${result.message}"
+                                    pendingDeleteSession = null
+                                    deletingSessionId = null
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text(text = if (deletingSessionId == session.sessionId) "删除中" else "删除")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = deletingSessionId == null,
+                    onClick = {
+                        pendingDeleteSession = null
+                    }
+                ) {
+                    Text(text = "取消")
+                }
+            }
+        )
     }
 
     Column(
@@ -144,6 +211,9 @@ fun OpenOnCallHomePage(
                         session = session,
                         onClick = {
                             onOpenChat(session.sessionId, session.title, null, false)
+                        },
+                        onDelete = {
+                            pendingDeleteSession = session
                         }
                     )
                 }
@@ -685,7 +755,8 @@ private fun CapabilityCard(
 @Composable
 private fun SessionRow(
     session: OnCallSessionDto,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -725,11 +796,19 @@ private fun SessionRow(
             Text(
                 text = listOfNotNull(
                     session.messageCount?.let { "${it} 条消息" },
-                    session.updatedAt ?: session.createdAt
+                    formatSessionTime(value = session.updatedAt ?: session.createdAt)
                 ).joinToString(separator = " · "),
                 fontSize = 12.sp,
                 lineHeight = 15.sp,
                 color = Color(color = 0xFF6B7280)
+            )
+        }
+        IconButton(onClick = onDelete) {
+            Icon(
+                modifier = Modifier.size(size = 20.dp),
+                imageVector = Icons.Rounded.DeleteOutline,
+                contentDescription = "删除会话",
+                tint = Color(color = 0xFF6B7280)
             )
         }
     }
@@ -861,21 +940,10 @@ private fun AssistantMessageBubble(
                 .padding(horizontal = 13.dp, vertical = 11.dp),
             verticalArrangement = Arrangement.spacedBy(space = 8.dp)
         ) {
-            Text(
-                text = message.content.ifBlank { if (message.streaming) "正在分析协议上下文…" else "暂无回复" },
-                fontSize = 15.sp,
-                lineHeight = 21.sp,
-                color = Color(color = 0xFF111827)
+            AssistantMarkdownText(
+                content = message.content,
+                streaming = message.streaming
             )
-            if (message.content.contains("```")) {
-                Text(
-                    text = "检测到代码块：后续会升级为独立代码块渲染。",
-                    fontSize = 12.sp,
-                    lineHeight = 15.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = Color(color = 0xFF6B7280)
-                )
-            }
             if (message.streaming) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(space = 8.dp),
@@ -1016,10 +1084,12 @@ private fun handleStreamEvent(
         }
 
         is OnCallStreamEvent.Tool -> {
-            messages += OnCallMessageUi.Tool(
-                id = UUID.randomUUID().toString(),
-                tool = event.tool
-            )
+            if (event.tool.status.isVisibleToolStatus()) {
+                messages += OnCallMessageUi.Tool(
+                    id = UUID.randomUUID().toString(),
+                    tool = event.tool
+                )
+            }
         }
 
         is OnCallStreamEvent.Done -> {
@@ -1041,6 +1111,409 @@ private fun handleStreamEvent(
             // 未知事件暂不打断主流程。服务端扩展新事件后可在这里补充新的展示卡片。
         }
     }
+}
+
+@Composable
+private fun AssistantMarkdownText(
+    content: String,
+    streaming: Boolean
+) {
+    val fallback = if (streaming) "正在分析协议上下文..." else "暂无回复"
+    val blocks = remember(content, streaming) {
+        parseAssistantMarkdown(content.ifBlank { fallback })
+    }
+    Column(
+        verticalArrangement = Arrangement.spacedBy(space = 7.dp)
+    ) {
+        blocks.forEach { block ->
+            when (block) {
+                is MarkdownBlock.Heading -> {
+                    Text(
+                        text = parseInlineMarkdown(block.text),
+                        fontSize = if (block.level <= 2) 17.sp else 16.sp,
+                        lineHeight = if (block.level <= 2) 22.sp else 21.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(color = 0xFF111827)
+                    )
+                }
+
+                is MarkdownBlock.Paragraph -> {
+                    Text(
+                        text = parseInlineMarkdown(block.text),
+                        fontSize = 15.sp,
+                        lineHeight = 21.sp,
+                        color = Color(color = 0xFF111827)
+                    )
+                }
+
+                is MarkdownBlock.ListBlock -> {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(space = 4.dp)
+                    ) {
+                        block.items.forEach { item ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(space = 7.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text(
+                                    text = "•",
+                                    fontSize = 15.sp,
+                                    lineHeight = 21.sp,
+                                    color = Color(color = 0xFF2563EB)
+                                )
+                                Text(
+                                    modifier = Modifier.weight(weight = 1f),
+                                    text = parseInlineMarkdown(item),
+                                    fontSize = 15.sp,
+                                    lineHeight = 21.sp,
+                                    color = Color(color = 0xFF111827)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                is MarkdownBlock.Code -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(shape = RoundedCornerShape(size = 10.dp))
+                            .background(color = Color(color = 0xFFF3F4F6))
+                            .horizontalScroll(state = rememberScrollState())
+                            .padding(horizontal = 10.dp, vertical = 9.dp)
+                    ) {
+                        Text(
+                            text = block.text.ifBlank { " " },
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color(color = 0xFF111827)
+                        )
+                    }
+                }
+
+                is MarkdownBlock.Table -> {
+                    MarkdownTable(block = block)
+                }
+            }
+        }
+    }
+}
+
+private fun parseAssistantMarkdown(content: String): List<MarkdownBlock> {
+    val blocks = mutableListOf<MarkdownBlock>()
+    val paragraph = mutableListOf<String>()
+    val listItems = mutableListOf<String>()
+    val tableRows = mutableListOf<List<String>>()
+    val codeLines = mutableListOf<String>()
+    var inCode = false
+
+    fun flushParagraph() {
+        if (paragraph.isNotEmpty()) {
+            blocks += MarkdownBlock.Paragraph(text = paragraph.joinToString(separator = "\n").trim())
+            paragraph.clear()
+        }
+    }
+
+    fun flushList() {
+        if (listItems.isNotEmpty()) {
+            blocks += MarkdownBlock.ListBlock(items = listItems.toList())
+            listItems.clear()
+        }
+    }
+
+    fun flushTable() {
+        if (tableRows.isNotEmpty()) {
+            val header = tableRows.first()
+            val body = tableRows.drop(n = 1)
+            blocks += MarkdownBlock.Table(header = header, rows = body)
+            tableRows.clear()
+        }
+    }
+
+    content.lines().forEach { rawLine ->
+        val line = rawLine.trimEnd()
+        val trimmed = line.trim()
+        if (trimmed.startsWith("```")) {
+            if (inCode) {
+                blocks += MarkdownBlock.Code(text = codeLines.joinToString(separator = "\n"))
+                codeLines.clear()
+            } else {
+                flushParagraph()
+                flushList()
+                flushTable()
+            }
+            inCode = !inCode
+            return@forEach
+        }
+        if (inCode) {
+            codeLines += rawLine
+            return@forEach
+        }
+        if (trimmed.isBlank()) {
+            flushParagraph()
+            flushList()
+            flushTable()
+            return@forEach
+        }
+        val headingLevel = trimmed.takeWhile { it == '#' }.length
+        if (headingLevel in 1..6 && trimmed.drop(headingLevel).startsWith(" ")) {
+            flushParagraph()
+            flushList()
+            flushTable()
+            blocks += MarkdownBlock.Heading(
+                level = headingLevel,
+                text = trimmed.drop(headingLevel).trim()
+            )
+            return@forEach
+        }
+        val tableRow = parseMarkdownTableRow(trimmed)
+        if (tableRow != null) {
+            flushParagraph()
+            flushList()
+            if (!tableRow.isMarkdownDividerRow()) {
+                tableRows += tableRow
+            }
+            return@forEach
+        }
+        val unorderedItem = when {
+            trimmed.startsWith("- ") -> trimmed.drop(2).trim()
+            trimmed.startsWith("* ") -> trimmed.drop(2).trim()
+            else -> null
+        }
+        val orderedItem = trimmed.replaceFirst(regex = """^\d+[.)]\s+""".toRegex(), replacement = "")
+            .takeIf { it != trimmed }
+        val listItem = unorderedItem ?: orderedItem
+        if (listItem != null) {
+            flushParagraph()
+            flushTable()
+            listItems += listItem
+            return@forEach
+        }
+        flushList()
+        flushTable()
+        paragraph += line
+    }
+    if (inCode && codeLines.isNotEmpty()) {
+        blocks += MarkdownBlock.Code(text = codeLines.joinToString(separator = "\n"))
+    }
+    flushParagraph()
+    flushList()
+    flushTable()
+    return blocks.ifEmpty { listOf(MarkdownBlock.Paragraph(text = content)) }
+}
+
+@Composable
+private fun MarkdownTable(block: MarkdownBlock.Table) {
+    val columnCount = maxOf(
+        block.header.size,
+        block.rows.maxOfOrNull { it.size } ?: 0
+    ).coerceAtLeast(minimumValue = 1)
+    val cellWidth = 132.dp
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(state = rememberScrollState())
+            .clip(shape = RoundedCornerShape(size = 10.dp))
+            .background(color = Color(color = 0xFFF8FAFC))
+    ) {
+        TableRow(
+            cells = block.header.normalizeCellCount(columnCount),
+            cellWidth = cellWidth,
+            backgroundColor = Color(color = 0xFFEFF6FF),
+            fontWeight = FontWeight.Bold
+        )
+        block.rows.forEachIndexed { index, row ->
+            TableRow(
+                cells = row.normalizeCellCount(columnCount),
+                cellWidth = cellWidth,
+                backgroundColor = if (index % 2 == 0) {
+                    Color.White
+                } else {
+                    Color(color = 0xFFF8FAFC)
+                },
+                fontWeight = FontWeight.Normal
+            )
+        }
+    }
+}
+
+@Composable
+private fun TableRow(
+    cells: List<String>,
+    cellWidth: androidx.compose.ui.unit.Dp,
+    backgroundColor: Color,
+    fontWeight: FontWeight
+) {
+    Row(
+        modifier = Modifier.background(color = backgroundColor)
+    ) {
+        cells.forEach { cell ->
+            Text(
+                modifier = Modifier
+                    .width(width = cellWidth)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                text = parseInlineMarkdown(cell),
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                fontWeight = fontWeight,
+                color = Color(color = 0xFF111827)
+            )
+        }
+    }
+}
+
+private fun parseInlineMarkdown(text: String): AnnotatedString {
+    if (!text.contains("**") && !text.contains("`")) {
+        return AnnotatedString(text)
+    }
+    return buildAnnotatedString {
+        var index = 0
+        while (index < text.length) {
+            when {
+                text.startsWith("**", startIndex = index) -> {
+                    val end = text.indexOf(string = "**", startIndex = index + 2)
+                    if (end != -1) {
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(text.substring(startIndex = index + 2, endIndex = end))
+                        }
+                        index = end + 2
+                    } else {
+                        append(text[index])
+                        index += 1
+                    }
+                }
+
+                text[index] == '`' -> {
+                    val end = text.indexOf(char = '`', startIndex = index + 1)
+                    if (end != -1) {
+                        withStyle(
+                            style = SpanStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(color = 0xFF1D4ED8),
+                                background = Color(color = 0xFFEFF6FF)
+                            )
+                        ) {
+                            append(text.substring(startIndex = index + 1, endIndex = end))
+                        }
+                        index = end + 1
+                    } else {
+                        append(text[index])
+                        index += 1
+                    }
+                }
+
+                else -> {
+                    append(text[index])
+                    index += 1
+                }
+            }
+        }
+    }
+}
+
+private fun parseMarkdownTableRow(line: String): List<String>? {
+    if (!line.contains("|")) {
+        return null
+    }
+    val trimmed = line.trim()
+    if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) {
+        return null
+    }
+    val cells = trimmed
+        .trim('|')
+        .split("|")
+        .map { it.trim() }
+    return cells.takeIf { row -> row.size >= 2 && row.any { it.isNotBlank() } }
+}
+
+private fun List<String>.isMarkdownDividerRow(): Boolean {
+    return isNotEmpty() && all { cell ->
+        cell.isNotBlank() && cell.all { char ->
+            char == '-' || char == ':' || char == ' '
+        }
+    }
+}
+
+private fun List<String>.normalizeCellCount(count: Int): List<String> {
+    return if (size >= count) {
+        take(count)
+    } else {
+        this + List(size = count - size) { "" }
+    }
+}
+
+private fun formatSessionTime(value: String?): String {
+    if (value.isNullOrBlank()) {
+        return "暂无更新时间"
+    }
+    return runCatching {
+        val sessionTime = OffsetDateTime.parse(value)
+            .atZoneSameInstant(ZoneId.systemDefault())
+            .toLocalDateTime()
+        val now = java.time.LocalDateTime.now()
+        val duration = Duration.between(sessionTime, now)
+        when {
+            duration.toMinutes() < 1 -> "刚刚"
+            duration.toHours() < 1 -> "${duration.toMinutes()} 分钟前"
+            sessionTime.toLocalDate() == LocalDate.now() -> {
+                "今天 ${sessionTime.format(DateTimeFormatter.ofPattern("HH:mm"))}"
+            }
+
+            sessionTime.toLocalDate() == LocalDate.now().minusDays(1) -> {
+                "昨天 ${sessionTime.format(DateTimeFormatter.ofPattern("HH:mm"))}"
+            }
+
+            sessionTime.year == now.year -> {
+                sessionTime.format(DateTimeFormatter.ofPattern("MM月dd日 HH:mm"))
+            }
+
+            else -> {
+                sessionTime.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"))
+            }
+        }
+    }.getOrElse {
+        value.replace(oldValue = "T", newValue = " ").substringBefore(delimiter = "+")
+    }
+}
+
+private fun String.isVisibleToolStatus(): Boolean {
+    return trim().lowercase() in setOf(
+        "completed",
+        "complete",
+        "success",
+        "succeeded",
+        "error",
+        "failed",
+        "failure"
+    )
+}
+
+private sealed class MarkdownBlock {
+
+    data class Heading(
+        val level: Int,
+        val text: String
+    ) : MarkdownBlock()
+
+    data class Paragraph(
+        val text: String
+    ) : MarkdownBlock()
+
+    data class ListBlock(
+        val items: List<String>
+    ) : MarkdownBlock()
+
+    data class Table(
+        val header: List<String>,
+        val rows: List<List<String>>
+    ) : MarkdownBlock()
+
+    data class Code(
+        val text: String
+    ) : MarkdownBlock()
+
 }
 
 private sealed class OnCallMessageUi {
