@@ -3,9 +3,16 @@ package github.leavesczy.compose_chat.open.repository
 import github.leavesczy.compose_chat.open.config.OpenApiConfig
 import github.leavesczy.compose_chat.open.model.ApprovalSummaryResponse
 import github.leavesczy.compose_chat.open.model.CreateCustomWebTabRequest
+import github.leavesczy.compose_chat.open.model.EntryType
+import github.leavesczy.compose_chat.open.model.OpenBusinessPermissions
+import github.leavesczy.compose_chat.open.model.OpenBusinessTabIds
+import github.leavesczy.compose_chat.open.model.SemanticVersionDto
 import github.leavesczy.compose_chat.open.model.SuccessResponse
+import github.leavesczy.compose_chat.open.model.TabExtensionDto
 import github.leavesczy.compose_chat.open.model.TabManifest
 import github.leavesczy.compose_chat.open.model.TabMutationResponse
+import github.leavesczy.compose_chat.open.model.TitleBarExtensionDto
+import github.leavesczy.compose_chat.open.model.UpdateCustomWebTabRequest
 import github.leavesczy.compose_chat.open.network.OpenApiClient
 import github.leavesczy.compose_chat.open.network.OpenApiResult
 import github.leavesczy.compose_chat.open.network.OpenJsonParser
@@ -20,6 +27,8 @@ class OpenTabRepository(
     private val apiClient: OpenApiClient = OpenApiClient(),
     private val sessionManager: OpenSessionManager = OpenSessionManager
 ) {
+
+    private val teamBusinessMockRepository = OpenTeamBusinessMockRepository()
 
     suspend fun getRemoteTabs(): OpenApiResult<List<TabManifest>> {
         return apiClient.get(path = "/tabs").map(OpenJsonParser::parseTabs)
@@ -52,19 +61,53 @@ class OpenTabRepository(
         return apiClient.postJson(path = "/tabs", json = body).map(OpenJsonParser::parseTabMutation)
     }
 
+    suspend fun updateCustomWebTab(
+        tabId: String,
+        request: UpdateCustomWebTabRequest
+    ): OpenApiResult<TabMutationResponse> {
+        val body = JSONObject()
+            .put("displayName", request.displayName)
+            .put("description", request.description)
+            .put("icon", request.icon)
+            .put("entryUri", request.entryUri)
+        request.sortOrder?.let { sortOrder ->
+            body.put("sortOrder", sortOrder)
+        }
+        return apiClient.putJson(path = "/tabs/$tabId", json = body).map(OpenJsonParser::parseTabMutation)
+    }
+
+    suspend fun deleteCustomTab(tabId: String): OpenApiResult<SuccessResponse> {
+        return apiClient.delete(path = "/tabs/$tabId").map(OpenJsonParser::parseSuccess)
+    }
+
     suspend fun getApprovalSummary(): OpenApiResult<ApprovalSummaryResponse> {
         return apiClient.get(path = "/business/approval/summary").map(OpenJsonParser::parseApprovalSummary)
     }
 
     fun getMockTabs(): List<OpenTabItem> {
-        return buildItems(manifests = OpenMockData.tabs(), remoteLoaded = false)
+        val profile = teamBusinessMockRepository.currentProfile(account = sessionManager.lastAccount)
+        return buildItems(
+            manifests = targetBusinessTabs(),
+            remoteLoaded = false,
+            permissions = profile.permissions.toSet(),
+            mergeTargetBusinessTabs = true
+        )
     }
 
-    fun buildItems(manifests: List<TabManifest>, remoteLoaded: Boolean = true): List<OpenTabItem> {
-        val permissions = sessionManager.permissions.ifEmpty {
-            OpenMockData.defaultPermissions
+    fun buildItems(
+        manifests: List<TabManifest>,
+        remoteLoaded: Boolean = true,
+        permissions: Set<String> = sessionManager.permissions,
+        mergeTargetBusinessTabs: Boolean = false
+    ): List<OpenTabItem> {
+        val sourceManifests = if (mergeTargetBusinessTabs) {
+            manifests.withTargetBusinessTabs()
+        } else {
+            manifests
         }
-        val normalizedManifests = manifests.withClientBuiltInTabs()
+        val normalizedManifests = sourceManifests.withClientBuiltInTabs()
+            .filter { manifest -> permissions.containsAll(manifest.permissions) }
+            .map { manifest -> manifest.withClientDisplayOverrides() }
         return normalizedManifests.sortedBy { it.sortOrder }.map { manifest ->
             OpenTabItem(
                 manifest = manifest,
@@ -83,6 +126,16 @@ class OpenTabRepository(
             OpenTabSource.Remote
         } else {
             OpenTabSource.LocalMock
+        }
+    }
+
+    private fun TabManifest.withClientDisplayOverrides(): TabManifest {
+        return when (id) {
+            OpenBusinessTabIds.Announcements -> copy(
+                displayName = "公告",
+                description = "查看公司公告和团队公告"
+            )
+            else -> this
         }
     }
 
@@ -124,6 +177,110 @@ class OpenTabRepository(
             tabs = tabs + OpenMockData.aiOncallTab()
         }
         return tabs
+    }
+
+    private fun List<TabManifest>.withTargetBusinessTabs(): List<TabManifest> {
+        val remoteIds = map { it.id }.toSet()
+        val merged = this + targetBusinessTabs().filterNot { tab -> tab.id in remoteIds }
+        return merged.filterNot { tab -> tab.id == "finance" || tab.id == "legacy-hybrid" || tab.id == "future-tab" }
+    }
+
+    private fun targetBusinessTabs(): List<TabManifest> {
+        return listOf(
+            targetTab(
+                id = OpenBusinessTabIds.CompanyIntro,
+                displayName = "公司介绍",
+                description = "查看企业背景、组织信息和项目介绍",
+                icon = "company",
+                route = "/company-intro",
+                permissions = listOf(OpenBusinessPermissions.CompanyRead),
+                sortOrder = 10
+            ),
+            targetTab(
+                id = OpenBusinessTabIds.Announcements,
+                displayName = "公告",
+                description = "查看全公司公告和团队公告",
+                icon = "announcement",
+                route = "/announcements",
+                permissions = listOf(OpenBusinessPermissions.AnnouncementRead),
+                sortOrder = 20
+            ),
+            targetTab(
+                id = OpenBusinessTabIds.Approval,
+                displayName = "审批中心",
+                description = "提交审批、查看进度和处理待审批事项",
+                icon = "approval",
+                route = "/approval",
+                permissions = listOf(OpenBusinessPermissions.ApprovalRead),
+                sortOrder = 30
+            ),
+            targetTab(
+                id = OpenBusinessTabIds.Calendar,
+                displayName = "团队日程",
+                description = "查看团队日程、参与日程和全公司日程",
+                icon = "calendar",
+                route = "/calendar",
+                permissions = listOf(OpenBusinessPermissions.CalendarRead),
+                sortOrder = 40
+            ),
+            targetTab(
+                id = OpenBusinessTabIds.Fun,
+                displayName = "放松一刻",
+                description = "团队轻量娱乐和休息入口",
+                icon = "fun",
+                route = "/fun",
+                permissions = listOf(OpenBusinessPermissions.FunRead),
+                sortOrder = 50
+            ),
+            targetTab(
+                id = OpenBusinessTabIds.PermissionAdmin,
+                displayName = "权限管理",
+                description = "管理团队、成员、角色和可见业务入口",
+                icon = "admin",
+                route = "/permission-admin",
+                permissions = listOf(OpenBusinessPermissions.AdminManage),
+                sortOrder = 60
+            ),
+            targetTab(
+                id = OpenBusinessTabIds.AiOnCall,
+                displayName = "AI oncall",
+                description = "提供协议问答、配置诊断和接入建议",
+                icon = "ai-oncall",
+                route = "/ai-oncall",
+                permissions = listOf(OpenBusinessPermissions.AiOnCall),
+                sortOrder = 70
+            )
+        )
+    }
+
+    private fun targetTab(
+        id: String,
+        displayName: String,
+        description: String,
+        icon: String,
+        route: String,
+        permissions: List<String>,
+        sortOrder: Int
+    ): TabManifest {
+        return TabManifest(
+            id = id,
+            displayName = displayName,
+            description = description,
+            icon = icon,
+            route = route,
+            entryType = EntryType.Native,
+            entryUri = null,
+            version = SemanticVersionDto(major = 1, minor = 0, patch = 0),
+            minContainerVersion = 1,
+            permissions = permissions,
+            enabled = true,
+            sortOrder = sortOrder,
+            extension = TabExtensionDto(
+                titleBar = TitleBarExtensionDto(rightText = null, menuItems = emptyList()),
+                fab = null
+            ),
+            extraConfig = emptyMap()
+        )
     }
 
     private companion object {

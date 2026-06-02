@@ -12,6 +12,7 @@ object OpenSessionManager {
     private const val KEY_USER_ID = "userId"
     private const val KEY_DISPLAY_NAME = "displayName"
     private const val KEY_PERMISSIONS = "permissions"
+    private const val KEY_LAST_ACCOUNT = "lastAccount"
 
     private lateinit var preferences: SharedPreferences
 
@@ -30,6 +31,9 @@ object OpenSessionManager {
             return rawValue.split(separator).filter { it.isNotBlank() }.toSet()
         }
 
+    val lastAccount: String
+        get() = preferences.getString(KEY_LAST_ACCOUNT, "") ?: ""
+
     val isLoggedIn: Boolean
         get() = token.isNotBlank()
 
@@ -41,19 +45,27 @@ object OpenSessionManager {
         token: String,
         userId: String?,
         displayName: String,
-        permissions: List<String>
+        permissions: List<String>,
+        account: String? = null
     ) {
         preferences.edit {
             putString(KEY_TOKEN, token)
             putString(KEY_USER_ID, userId.orEmpty())
             putString(KEY_DISPLAY_NAME, displayName)
             putString(KEY_PERMISSIONS, permissions.joinToString(separator = separator))
+            if (!account.isNullOrBlank()) {
+                putString(KEY_LAST_ACCOUNT, account)
+            }
         }
     }
 
     fun clear() {
+        val lastAccount = this.lastAccount
         preferences.edit {
             clear()
+            if (lastAccount.isNotBlank()) {
+                putString(KEY_LAST_ACCOUNT, lastAccount)
+            }
         }
     }
 

@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import github.leavesczy.compose_chat.open.ui.OpenOnCallHomePage
+import github.leavesczy.compose_chat.open.ui.OpenOnCallPage
 import github.leavesczy.compose_chat.open.ui.OpenProfilePage
 import github.leavesczy.compose_chat.open.ui.OpenTabContentHost
 import github.leavesczy.compose_chat.open.ui.OpenWorkbenchPage
@@ -34,78 +36,77 @@ fun MainPage(
     friendshipViewModel: FriendshipViewModel,
     personProfileViewModel: PersonProfileViewModel
 ) {
-    ModalNavigationDrawer(
+    Scaffold(
         modifier = Modifier
             .fillMaxSize(),
-        drawerState = mainViewModel.drawerViewState.drawerState,
-        drawerContent = {
-            MainPageDrawer(viewState = mainViewModel.drawerViewState)
-        },
-        content = {
-            Scaffold(
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentWindowInsets = WindowInsets(),
-                containerColor = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color,
-                bottomBar = {
-                    if (mainViewModel.bottomBarViewState.selectedTab != MainPageTab.AiOncall) {
-                        MainPageBottomBar(viewState = mainViewModel.bottomBarViewState)
-                    }
+        contentWindowInsets = WindowInsets(),
+        containerColor = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color,
+        bottomBar = {
+            val bottomBarViewState = mainViewModel.bottomBarViewState
+            val inOnCallChat = bottomBarViewState.selectedTab == MainPageTab.AiOncall &&
+                bottomBarViewState.selectedOpenTabId == "ai-oncall"
+            if (!inOnCallChat) {
+                MainPageBottomBar(viewState = mainViewModel.bottomBarViewState)
+            }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .padding(paddingValues = innerPadding)
+                .fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            val bottomBarViewState = mainViewModel.bottomBarViewState
+            val selectedOpenTab = bottomBarViewState.openTabs.firstOrNull { tab ->
+                tab.id == bottomBarViewState.selectedOpenTabId
+            }
+            if (bottomBarViewState.selectedTab == MainPageTab.AiOncall &&
+                bottomBarViewState.selectedOpenTabId == "ai-oncall"
+            ) {
+                key(bottomBarViewState.onCallRouteKey) {
+                    OpenOnCallPage(
+                        initialSessionId = bottomBarViewState.onCallSessionId,
+                        initialSessionTitle = bottomBarViewState.onCallSessionTitle,
+                        initialPrompt = bottomBarViewState.onCallInitialPrompt,
+                        forceNewSession = bottomBarViewState.onCallForceNewSession,
+                        onBackToOnCallHome = mainViewModel::backToOnCallHome
+                    )
                 }
-            ) { innerPadding ->
-                Box(
-                    modifier = Modifier
-                        .padding(paddingValues = innerPadding)
-                        .fillMaxSize(),
-                    contentAlignment = Alignment.TopCenter
-                ) {
-                    val bottomBarViewState = mainViewModel.bottomBarViewState
-                    val selectedOpenTab = bottomBarViewState.openTabs.firstOrNull { tab ->
-                        tab.id == bottomBarViewState.selectedOpenTabId
+            } else if (bottomBarViewState.selectedTab == MainPageTab.Workbench && selectedOpenTab != null) {
+                OpenTabContentHost(
+                    tab = selectedOpenTab,
+                    onBackToWorkbench = mainViewModel::backToWorkbench
+                )
+            } else {
+                when (bottomBarViewState.selectedTab) {
+                    MainPageTab.Conversation -> {
+                        ConversationPage(pageViewState = conversationViewModel.pageViewState)
                     }
-                    if (selectedOpenTab != null) {
-                        OpenTabContentHost(
-                            tab = selectedOpenTab,
-                            onBackToWorkbench = if (bottomBarViewState.selectedTab == MainPageTab.Workbench) {
-                                mainViewModel::backToWorkbench
-                            } else {
-                                null
-                            }
+
+                    MainPageTab.Friendship -> {
+                        FriendshipPage(pageViewState = friendshipViewModel.pageViewState)
+                    }
+
+                    MainPageTab.Workbench -> {
+                        OpenWorkbenchPage(
+                            openTabs = bottomBarViewState.openTabs,
+                            onRefreshTabs = mainViewModel::refreshOpenTabs,
+                            onClickOpenTab = bottomBarViewState.onClickOpenTab
                         )
-                    } else {
-                        when (bottomBarViewState.selectedTab) {
-                            MainPageTab.Conversation -> {
-                                ConversationPage(pageViewState = conversationViewModel.pageViewState)
-                            }
+                    }
 
-                            MainPageTab.Friendship -> {
-                                FriendshipPage(pageViewState = friendshipViewModel.pageViewState)
-                            }
+                    MainPageTab.AiOncall -> {
+                        OpenOnCallHomePage(
+                            onOpenChat = mainViewModel::openOnCallChat
+                        )
+                    }
 
-                            MainPageTab.Workbench -> {
-                                OpenWorkbenchPage(
-                                    openTabs = bottomBarViewState.openTabs,
-                                    onRefreshTabs = mainViewModel::refreshOpenTabs,
-                                    onClickOpenTab = bottomBarViewState.onClickOpenTab
-                                )
-                            }
-
-                            MainPageTab.AiOncall -> {
-                                OpenTabContentHost(
-                                    tab = bottomBarViewState.openTabs.firstOrNull { tab ->
-                                        tab.id == "ai-oncall"
-                                    }
-                                )
-                            }
-
-                            MainPageTab.Person -> {
-                                OpenProfilePage(viewState = mainViewModel.openProfileViewState)
-                            }
-                        }
+                    MainPageTab.Person -> {
+                        OpenProfilePage(viewState = mainViewModel.openProfileViewState)
                     }
                 }
             }
-            FriendshipDialog(viewState = friendshipViewModel.friendshipDialogViewState)
         }
-    )
+    }
+    FriendshipDialog(viewState = friendshipViewModel.friendshipDialogViewState)
 }

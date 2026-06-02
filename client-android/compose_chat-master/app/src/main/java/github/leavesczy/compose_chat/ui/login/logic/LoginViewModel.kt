@@ -7,7 +7,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.viewModelScope
-import github.leavesczy.compose_chat.open.config.OpenApiConfig
 import github.leavesczy.compose_chat.open.model.LoginRequest
 import github.leavesczy.compose_chat.open.model.RegisterRequest
 import github.leavesczy.compose_chat.open.network.OpenApiResult
@@ -34,10 +33,10 @@ class LoginViewModel : BaseViewModel() {
         private set
 
     private fun buildLoginPageViewState(): LoginPageViewState {
-        val account = OpenApiConfig.DEFAULT_ACCOUNT.toTextFieldValue()
-        val password = OpenApiConfig.DEFAULT_PASSWORD.toTextFieldValue()
+        val account = OpenSessionManager.lastAccount.toTextFieldValue()
+        val password = "".toTextFieldValue()
         return LoginPageViewState(
-            panelVisible = !OpenSessionManager.isLoggedIn,
+            panelVisible = true,
             account = account,
             password = password,
             registerDisplayName = "".toTextFieldValue(),
@@ -75,12 +74,6 @@ class LoginViewModel : BaseViewModel() {
 
     private fun onToggleRegisterMode() {
         loginPageViewState = loginPageViewState.copy(registerMode = !loginPageViewState.registerMode)
-    }
-
-    fun tryAutoLogin(activity: Activity) {
-        if (OpenSessionManager.isLoggedIn) {
-            navToMainActivityAndFinish(activity = activity)
-        }
     }
 
     private fun onClickLogin(activity: Activity) {
@@ -133,7 +126,6 @@ class LoginViewModel : BaseViewModel() {
                 return@launch
             }
             showLoadingDialog()
-            // 注册接口目前在云端返回 404。这里先按照约定协议接入，接口上线后可直接复用登录成功流程。
             when (val result = authRepository.register(
                 RegisterRequest(
                     account = account,
