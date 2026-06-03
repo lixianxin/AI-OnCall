@@ -12,8 +12,10 @@ android {
 dependencies {
     implementation(project(":base"))
     implementation(project(":proxy"))
+    implementation(project(":protocol"))
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.exifinterface)
     implementation(libs.kotlinx.coroutines)

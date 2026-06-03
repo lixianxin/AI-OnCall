@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.GeneratingTokens
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Widgets
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.vector.ImageVector
 import github.leavesczy.compose_chat.open.model.EntryType
 import github.leavesczy.compose_chat.open.model.TabManifest
+import github.leavesczy.compose_chat.protocol.TabErrors
 
 @Stable
 data class OpenTabItem(
@@ -53,6 +55,7 @@ enum class OpenTabState {
 enum class OpenTabSource {
     Remote,
     ClientBuiltIn,
+    ProtocolRegistered,
     LocalMock
 }
 
@@ -71,7 +74,12 @@ object OpenTabRegistry {
     )
 
     fun supportsRoute(route: String): Boolean {
-        return route in nativeRoutes || route == "/docs" || route == "/bilibili" || route.startsWith("/custom-")
+        return route in nativeRoutes ||
+            route == "/docs" ||
+            route == "/bilibili" ||
+            route == "/tiktok" ||
+            route.startsWith("/custom-") ||
+            OpenTabContainer.supportsRoute(route = route)
     }
 
     fun supportsEntryType(entryType: EntryType): Boolean {
@@ -101,8 +109,21 @@ object OpenTabRegistry {
             "shape-category" -> Icons.Rounded.Category
             "shape-globe" -> Icons.Rounded.Language
             "shape-heart" -> Icons.Rounded.Favorite
+            "protocol-guide" -> Icons.Rounded.Map
             else -> Icons.Filled.Menu
         }
     }
 
+}
+
+fun OpenTabState.toErrorCode(): Int {
+    return when (this) {
+        OpenTabState.Openable -> 0
+        OpenTabState.Disabled -> 0
+        OpenTabState.PermissionDenied -> TabErrors.PERMISSION_DENIED
+        OpenTabState.VersionIncompatible -> TabErrors.CONTAINER_VERSION_TOO_LOW
+        OpenTabState.InvalidConfig -> TabErrors.MISSING_REQUIRED_FIELD
+        OpenTabState.RouteUnsupported -> 0
+        OpenTabState.EntryUnsupported -> 0
+    }
 }

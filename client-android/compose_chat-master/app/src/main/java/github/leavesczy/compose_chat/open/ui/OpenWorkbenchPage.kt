@@ -23,12 +23,15 @@ import androidx.compose.material.icons.rounded.Campaign
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ColorLens
 import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.SmartDisplay
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -145,7 +148,7 @@ private fun WorkbenchHeader(
             )
             HeaderIconButton(
                 icon = if (manageMode) Icons.Rounded.Check else Icons.Rounded.Settings,
-                contentDescription = if (manageMode) "完成管理" else "管理 Tab",
+                contentDescription = if (manageMode) "完成管理" else "管理业务应用",
                 onClick = onClickManage
             )
         }
@@ -231,7 +234,7 @@ private fun WorkbenchCategoryList(
         return
     }
     val categories = WorkbenchCategories.mapNotNull { category ->
-        val tabs = businessTabs.filter { tab -> category.routeKeys.any { key -> tab.id == key || tab.manifest.route == key } }
+        val tabs = businessTabs.filter { tab -> category.matches(tab = tab) }
         if (tabs.isEmpty()) null else category to tabs
     }
     val categorizedIds = categories.flatMap { (_, tabs) -> tabs.map { tab -> tab.id } }.toSet()
@@ -388,7 +391,7 @@ private fun TabManagePanel(
     var actionMessage by remember { mutableStateOf<String?>(null) }
     var pageMode by remember { mutableStateOf(TabManagePageMode.List) }
     var processingTabId by remember { mutableStateOf<String?>(null) }
-    val canCreateContainer = OpenSessionManager.permissions.contains("tab.admin.manage") ||
+    val canCreateBusinessApp = OpenSessionManager.permissions.contains("tab.admin.manage") ||
         OpenSessionManager.permissions.contains("team.manage")
 
     fun refreshCatalog() {
@@ -427,7 +430,7 @@ private fun TabManagePanel(
                 repository = repository,
                 onBack = { pageMode = TabManagePageMode.List },
                 onCreated = {
-                    actionMessage = "自定义容器已创建"
+                    actionMessage = "业务应用已添加"
                     pageMode = TabManagePageMode.List
                     onRefreshTabs()
                     refreshCatalog()
@@ -437,8 +440,8 @@ private fun TabManagePanel(
                 }
             )
         } else {
-            if (canCreateContainer) {
-                CreateContainerEntry(
+            if (canCreateBusinessApp) {
+                CreateBusinessAppEntry(
                     onClick = { pageMode = TabManagePageMode.CreateCustomWeb }
                 )
             }
@@ -485,10 +488,10 @@ private fun TabManagePanel(
                     }
                 )
             }
-            SectionTitle(title = "可添加的内置 Tab")
+            SectionTitle(title = "可添加的业务应用")
             val enabledIds = openTabs.map { it.id }.toSet()
             if (loadingCatalog) {
-                InfoBanner(text = "正在加载系统 Tab 目录…")
+                InfoBanner(text = "正在加载业务应用目录…")
             }
             catalog.filterNot { it.id in enabledIds || it.id == "ai-oncall" }.forEach { tab ->
                 ManageTabRow(
@@ -526,7 +529,7 @@ private fun TabManagePanel(
 }
 
 @Composable
-private fun CreateContainerEntry(onClick: () -> Unit) {
+private fun CreateBusinessAppEntry(onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -546,7 +549,7 @@ private fun CreateContainerEntry(onClick: () -> Unit) {
         ) {
             Icon(
                 modifier = Modifier.size(size = 22.dp),
-                imageVector = Icons.Rounded.AdminPanelSettings,
+                imageVector = Icons.Rounded.Language,
                 contentDescription = null,
                 tint = Color(color = 0xFF2563EB)
             )
@@ -556,14 +559,14 @@ private fun CreateContainerEntry(onClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(space = 4.dp)
         ) {
             Text(
-                text = "创建 Tab 容器",
+                text = "添加业务应用",
                 fontSize = 16.sp,
                 lineHeight = 19.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(color = 0xFF111827)
             )
             Text(
-                text = "系统管理员可接入新的网页业务入口",
+                text = "通过 Web 页面容器快速接入企业业务",
                 fontSize = 12.sp,
                 lineHeight = 15.sp,
                 color = Color(color = 0xFF37546D)
@@ -574,7 +577,7 @@ private fun CreateContainerEntry(onClick: () -> Unit) {
                 .clip(shape = RoundedCornerShape(size = 999.dp))
                 .background(color = Color.White)
                 .padding(horizontal = 10.dp, vertical = 6.dp),
-            text = "进入",
+            text = "添加",
             fontSize = 12.sp,
             lineHeight = 14.sp,
             fontWeight = FontWeight.Bold,
@@ -606,14 +609,14 @@ private fun CreateContainerPage(
                 verticalArrangement = Arrangement.spacedBy(space = 3.dp)
             ) {
                 Text(
-                    text = "创建 Tab 容器",
+                    text = "添加业务应用",
                     fontSize = 18.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
                 )
                 Text(
-                    text = "填写名称、说明和网页地址后创建新的业务入口。",
+                    text = "选择容器类型和工作台分类，发布后员工可直接打开。",
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
                     color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
@@ -730,7 +733,7 @@ private fun CustomTabInlineEditor(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(space = 8.dp)
     ) {
-        ManageTextField(value = displayName, label = "Tab 名称", onValueChange = { displayName = it })
+        ManageTextField(value = displayName, label = "应用名称", onValueChange = { displayName = it })
         ManageTextField(value = description, label = "描述", onValueChange = { description = it })
         ManageTextField(value = entryUri, label = "网页地址（http/https）", onValueChange = { entryUri = it.trim() })
         Box {
@@ -758,7 +761,7 @@ private fun CustomTabInlineEditor(
                     scope.launch {
                         val request = UpdateCustomWebTabRequest(
                             displayName = displayName.trim(),
-                            description = description.trim().ifBlank { "用户自定义网页 Tab" },
+                            description = description.trim().ifBlank { "企业自定义网页应用" },
                             icon = icon,
                             entryUri = entryUri.trim(),
                             sortOrder = tab.manifest.sortOrder.takeIf { it != Int.MAX_VALUE }
@@ -787,10 +790,12 @@ private fun CustomWebTabForm(
     onMessage: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var displayName by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var entryUri by remember { mutableStateOf("") }
-    var icon by remember { mutableStateOf("docs") }
+    var containerType by remember { mutableStateOf(BusinessContainerType.Web) }
+    var selectedCategoryKey by remember { mutableStateOf(WorkbenchCategoryKeys.Leisure) }
+    var displayName by remember { mutableStateOf("TikTok 短视频") }
+    var description by remember { mutableStateOf("通过 Web 页面容器接入短视频业务，支持滑动浏览和基础播放。") }
+    var entryUri by remember { mutableStateOf("https://www.tiktok.com/zh-Hans") }
+    var icon by remember { mutableStateOf("video") }
     var customIconUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val iconPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -807,11 +812,41 @@ private fun CustomWebTabForm(
             .clip(shape = RoundedCornerShape(size = 8.dp))
             .background(color = AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color)
             .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(space = 10.dp)
+        verticalArrangement = Arrangement.spacedBy(space = 12.dp)
     ) {
-        ManageTextField(value = displayName, label = "Tab 名称", onValueChange = { displayName = it })
-        ManageTextField(value = description, label = "描述", onValueChange = { description = it })
-        ManageTextField(value = entryUri, label = "网页地址（http/https）", onValueChange = { entryUri = it.trim() })
+        ContainerTypeSelector(
+            selectedType = containerType,
+            onSelect = { type -> containerType = type }
+        )
+        if (containerType == BusinessContainerType.Native) {
+            InfoBanner(text = "原生组件容器适合高性能或深度集成业务，后续会开放标准 Fragment 接口、生命周期规范和组件隔离能力。当前版本先开放 Web 页面容器。")
+        }
+        CategorySelector(
+            selectedCategoryKey = selectedCategoryKey,
+            onSelectCategory = { categoryKey -> selectedCategoryKey = categoryKey }
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(space = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SmallIconTextButton(
+                icon = Icons.Rounded.SmartDisplay,
+                text = "填入 TikTok 示例",
+                onClick = {
+                    containerType = BusinessContainerType.Web
+                    selectedCategoryKey = WorkbenchCategoryKeys.Leisure
+                    displayName = "TikTok 短视频"
+                    description = "通过 Web 页面容器接入短视频业务，支持滑动浏览和基础播放。"
+                    entryUri = "https://www.tiktok.com/zh-Hans"
+                    icon = "video"
+                    customIconUri = null
+                }
+            )
+        }
+        ManageTextField(value = displayName, label = "应用名称", onValueChange = { displayName = it })
+        ManageTextField(value = description, label = "应用描述", onValueChange = { description = it })
+        ManageTextField(value = entryUri, label = "入口 URL（http/https）", onValueChange = { entryUri = it.trim() })
         ContainerIconSelector(
             selectedIcon = icon,
             customIconUri = customIconUri,
@@ -825,6 +860,12 @@ private fun CustomWebTabForm(
                 )
             }
         )
+        PreviewCustomTabCard(
+            displayName = displayName.ifBlank { "业务应用名称" },
+            description = "${WorkbenchCategoryOptions.first { it.key == selectedCategoryKey }.title} · ${containerType.title}",
+            icon = icon,
+            entryUri = entryUri.ifBlank { "等待填写入口 URL" }
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(space = 10.dp),
@@ -837,18 +878,26 @@ private fun CustomWebTabForm(
             )
             SmallActionButton(
                 modifier = Modifier.weight(weight = 1f),
-                text = "创建",
-                enabled = displayName.isNotBlank() && entryUri.isWebUrl(),
+                text = "添加",
+                enabled = containerType == BusinessContainerType.Web && displayName.isNotBlank() && entryUri.isWebUrl(),
                 onClick = {
-                    val id = "custom-${displayName.toSlug()}-${System.currentTimeMillis().toString().takeLast(5)}"
+                    val category = WorkbenchCategoryOptions.first { it.key == selectedCategoryKey }
+                    val id = "custom-${category.key}-${displayName.toSlug()}-${System.currentTimeMillis().toString().takeLast(5)}"
                     scope.launch {
                         val request = CreateCustomWebTabRequest(
                             id = id,
                             displayName = displayName.trim(),
-                            description = description.trim().ifBlank { "用户自定义网页 Tab" },
+                            description = description.trim().ifBlank { "企业自定义 Web 业务应用" },
                             icon = icon,
                             route = "/$id",
-                            entryUri = entryUri.trim()
+                            entryUri = entryUri.trim(),
+                            sortOrder = category.defaultSortOrder,
+                            extraConfig = mapOf(
+                                "containerType" to "web",
+                                "category" to category.key,
+                                "allowedHosts" to entryUri.allowedHostForConfig(),
+                                "fallbackAsset" to "short_video_fallback.html"
+                            )
                         )
                         when (val result = repository.createCustomWebTab(request = request)) {
                             is OpenApiResult.Success -> {
@@ -857,7 +906,7 @@ private fun CustomWebTabForm(
                                 description = ""
                                 entryUri = ""
                                 customIconUri = null
-                                icon = "docs"
+                                icon = "video"
                             }
 
                             is OpenApiResult.Failed -> {
@@ -883,7 +932,7 @@ private fun ContainerIconSelector(
         verticalArrangement = Arrangement.spacedBy(space = 8.dp)
     ) {
         Text(
-            text = "容器图标",
+            text = "应用图标",
             fontSize = 14.sp,
             lineHeight = 17.sp,
             fontWeight = FontWeight.Bold,
@@ -940,6 +989,179 @@ private fun ContainerIconSelector(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ContainerTypeSelector(
+    selectedType: BusinessContainerType,
+    onSelect: (BusinessContainerType) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(space = 8.dp)
+    ) {
+        Text(
+            text = "容器类型",
+            fontSize = 14.sp,
+            lineHeight = 17.sp,
+            fontWeight = FontWeight.Bold,
+            color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+        )
+        BusinessContainerType.entries.forEach { type ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shape = RoundedCornerShape(size = 8.dp))
+                    .background(
+                        color = if (selectedType == type) {
+                            type.color.copy(alpha = 0.14f)
+                        } else {
+                            AppTheme.colorScheme.c_FFFFFFFF_FF101010.color
+                        }
+                    )
+                    .clickable(enabled = type.enabled) {
+                        onSelect(type)
+                    }
+                    .padding(horizontal = 12.dp, vertical = 11.dp),
+                horizontalArrangement = Arrangement.spacedBy(space = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    modifier = Modifier.size(size = 22.dp),
+                    imageVector = type.icon,
+                    contentDescription = null,
+                    tint = if (type.enabled) type.color else AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+                )
+                Column(
+                    modifier = Modifier.weight(weight = 1f),
+                    verticalArrangement = Arrangement.spacedBy(space = 3.dp)
+                ) {
+                    Text(
+                        text = "${type.title} · ${if (type.enabled) "已开放" else "待开放"}",
+                        fontSize = 14.sp,
+                        lineHeight = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+                    )
+                    Text(
+                        text = type.description,
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+                    )
+                }
+                if (selectedType == type) {
+                    Icon(
+                        modifier = Modifier.size(size = 18.dp),
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = type.color
+                    )
+                }
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(space = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            modifier = Modifier.size(size = 22.dp),
+            imageVector = OpenTabRegistry.iconOf(icon = option.value),
+            contentDescription = null,
+            tint = if (selected) {
+                option.color
+            } else {
+                option.color.copy(alpha = 0.82f)
+            }
+        )
+        Text(
+            text = option.label,
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
+            color = if (selected) {
+                option.color
+            } else {
+                AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategorySelector(
+    selectedCategoryKey: String,
+    onSelectCategory: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(space = 8.dp)
+    ) {
+        Text(
+            text = "工作台分类",
+            fontSize = 14.sp,
+            lineHeight = 17.sp,
+            fontWeight = FontWeight.Bold,
+            color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+        )
+        WorkbenchCategoryOptions.chunked(size = 2).forEach { rowOptions ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(space = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                rowOptions.forEach { option ->
+                    CategoryOptionButton(
+                        modifier = Modifier.weight(weight = 1f),
+                        option = option,
+                        selected = selectedCategoryKey == option.key,
+                        onClick = { onSelectCategory(option.key) }
+                    )
+                }
+                repeat(2 - rowOptions.size) {
+                    Box(modifier = Modifier.weight(weight = 1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryOptionButton(
+    modifier: Modifier,
+    option: WorkbenchCategoryOption,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = modifier
+            .clip(shape = RoundedCornerShape(size = 8.dp))
+            .background(
+                color = if (selected) {
+                    option.color.copy(alpha = 0.15f)
+                } else {
+                    AppTheme.colorScheme.c_FFFFFFFF_FF101010.color
+                }
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(space = 7.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            modifier = Modifier.size(size = 18.dp),
+            imageVector = option.icon,
+            contentDescription = null,
+            tint = option.color
+        )
+        Text(
+            modifier = Modifier.weight(weight = 1f),
+            text = option.title,
+            fontSize = 12.sp,
+            lineHeight = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+        )
     }
 }
 
@@ -1178,12 +1400,19 @@ private fun OpenTabSource.toDisplayText(): String {
     return when (this) {
         OpenTabSource.Remote -> "服务端下发"
         OpenTabSource.ClientBuiltIn -> "客户端内置"
+        OpenTabSource.ProtocolRegistered -> "协议注册"
         OpenTabSource.LocalMock -> "本地兜底"
     }
 }
 
 private fun String.isWebUrl(): Boolean {
     return startsWith("http://") || startsWith("https://")
+}
+
+private fun String.allowedHostForConfig(): String {
+    return runCatching {
+        android.net.Uri.parse(this).host.orEmpty().removePrefix("www.")
+    }.getOrDefault("").ifBlank { "unknown" }
 }
 
 private fun String.toSlug(): String {
@@ -1202,6 +1431,29 @@ private fun OpenTabItem.isEditableCustomWebTab(): Boolean {
 private enum class TabManagePageMode {
     List,
     CreateCustomWeb
+}
+
+private enum class BusinessContainerType(
+    val title: String,
+    val description: String,
+    val icon: ImageVector,
+    val color: Color,
+    val enabled: Boolean
+) {
+    Web(
+        title = "Web 页面容器",
+        description = "企业提供业务 URL，客户端用 WebView 承载，适合快速接入。",
+        icon = Icons.Rounded.Language,
+        color = Color(color = 0xFF2563EB),
+        enabled = true
+    ),
+    Native(
+        title = "原生组件容器",
+        description = "适合高性能业务，后续开放 Fragment 接口、生命周期和隔离规范。",
+        icon = Icons.Rounded.Extension,
+        color = Color(color = 0xFF7C3AED),
+        enabled = false
+    )
 }
 
 private data class ContainerIconOption(
@@ -1224,38 +1476,59 @@ private val ContainerIconOptions = listOf(
 )
 
 private data class WorkbenchCategory(
+    val key: String,
     val title: String,
     val icon: ImageVector,
     val color: Color,
     val routeKeys: List<String>
 )
 
+private fun WorkbenchCategory.matches(tab: OpenTabItem): Boolean {
+    return routeKeys.any { routeKey -> tab.id == routeKey || tab.manifest.route == routeKey } ||
+        tab.manifest.extraConfig["category"] == key ||
+        tab.id.startsWith("custom-$key-") ||
+        tab.manifest.route.startsWith("/custom-$key-")
+}
+
+private object WorkbenchCategoryKeys {
+    const val Company = "company"
+    const val Collaboration = "collaboration"
+    const val Leisure = "leisure"
+    const val Admin = "admin"
+    const val Business = "business"
+}
+
 private val WorkbenchCategories = listOf(
     WorkbenchCategory(
+        key = WorkbenchCategoryKeys.Company,
         title = "企业信息",
         icon = Icons.Rounded.Groups,
         color = Color(color = 0xFF2563EB),
         routeKeys = listOf("company", "company-intro", "announcements", "/company", "/company-intro", "/announcements")
     ),
     WorkbenchCategory(
+        key = WorkbenchCategoryKeys.Collaboration,
         title = "团队协作",
         icon = Icons.Rounded.WbSunny,
         color = Color(color = 0xFF16A34A),
         routeKeys = listOf("approval", "calendar", "/approval", "/calendar")
     ),
     WorkbenchCategory(
+        key = WorkbenchCategoryKeys.Leisure,
         title = "休闲服务",
         icon = Icons.Rounded.EmojiEmotions,
         color = Color(color = 0xFFF59E0B),
-        routeKeys = listOf("fun", "/fun")
+        routeKeys = listOf("fun", "tiktok-short-video", "/fun", "/tiktok")
     ),
     WorkbenchCategory(
+        key = WorkbenchCategoryKeys.Admin,
         title = "管理能力",
         icon = Icons.Rounded.AdminPanelSettings,
         color = Color(color = 0xFF7C3AED),
-        routeKeys = listOf("permission-admin", "/permission-admin")
+        routeKeys = listOf("permission-admin", "protocol-guide", "/permission-admin", "/protocol-guide")
     ),
     WorkbenchCategory(
+        key = WorkbenchCategoryKeys.Business,
         title = "经营看板",
         icon = Icons.Rounded.ColorLens,
         color = Color(color = 0xFF0891B2),
@@ -1264,8 +1537,27 @@ private val WorkbenchCategories = listOf(
 )
 
 private val WorkbenchCustomCategory = WorkbenchCategory(
+    key = "custom",
     title = "其他应用",
     icon = Icons.Rounded.Campaign,
     color = Color(color = 0xFF64748B),
     routeKeys = emptyList()
 )
+
+private data class WorkbenchCategoryOption(
+    val key: String,
+    val title: String,
+    val icon: ImageVector,
+    val color: Color,
+    val defaultSortOrder: Int
+)
+
+private val WorkbenchCategoryOptions = WorkbenchCategories.mapIndexed { index, category ->
+    WorkbenchCategoryOption(
+        key = category.key,
+        title = category.title,
+        icon = category.icon,
+        color = category.color,
+        defaultSortOrder = 200 + index * 20
+    )
+}
