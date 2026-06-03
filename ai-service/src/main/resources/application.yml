@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: ai-service
+
+server:
+  port: 8081
+
+logging:
+  level:
+    com.oncall.ai: DEBUG
+    reactor.netty: INFO
+
+deepseek:
+  api-key: sk-207987ffc28548b497c903c5371ae8bd
+  base-url: https://api.deepseek.com
+  model: deepseek-chat
+
+oncall:
+  docs-path: ${ONCALL_DOCS_PATH:../docs}

@@ -1059,6 +1059,30 @@ private fun ContainerTypeSelector(
                         tint = type.color
                     )
                 }
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(space = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            modifier = Modifier.size(size = 22.dp),
+            imageVector = OpenTabRegistry.iconOf(icon = option.value),
+            contentDescription = null,
+            tint = if (selected) {
+                option.color
+            } else {
+                option.color.copy(alpha = 0.82f)
+            }
+        )
+        Text(
+            text = option.label,
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
+            color = if (selected) {
+                option.color
+            } else {
+                AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
             }
         }
     }
