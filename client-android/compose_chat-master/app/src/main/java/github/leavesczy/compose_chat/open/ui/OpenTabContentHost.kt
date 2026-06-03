@@ -1,14 +1,28 @@
 package github.leavesczy.compose_chat.open.ui
 
 import androidx.activity.compose.BackHandler
+import android.annotation.SuppressLint
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import android.content.res.Configuration
+import android.os.Bundle
+import android.os.SystemClock
+import android.view.ViewGroup
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -22,16 +36,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Article
-import androidx.compose.material.icons.rounded.EditNote
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,22 +59,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
-import android.annotation.SuppressLint
-import android.view.ViewGroup
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import github.leavesczy.compose_chat.open.model.EntryType
 import github.leavesczy.compose_chat.open.model.OpenAnnouncementItem
 import github.leavesczy.compose_chat.open.model.OpenAnnouncementScope
@@ -75,9 +87,13 @@ import github.leavesczy.compose_chat.open.repository.OpenBusinessPermissionRules
 import github.leavesczy.compose_chat.open.repository.OpenTeamBusinessMockRepository
 import github.leavesczy.compose_chat.open.repository.OpenTeamBusinessRepository
 import github.leavesczy.compose_chat.open.session.OpenSessionManager
+import github.leavesczy.compose_chat.open.tab.OpenTabContainer
 import github.leavesczy.compose_chat.open.tab.OpenTabItem
 import github.leavesczy.compose_chat.open.tab.OpenTabState
+import github.leavesczy.compose_chat.open.tab.RegisteredOpenTab
+import github.leavesczy.compose_chat.open.tab.toErrorCode
 import github.leavesczy.compose_chat.ui.theme.AppTheme
+import github.leavesczy.compose_chat.protocol.TabErrors
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -112,10 +128,25 @@ fun OpenTabContentHost(
         return
     }
     if (tab.openState != OpenTabState.Openable) {
+        val errorCode = tab.openState.toErrorCode()
         OpenStatePage(
             modifier = modifier,
             title = tab.displayName,
-            message = tab.openState.toDisplayMessage(tab = tab),
+            message = if (errorCode == 0) {
+                tab.openState.toDisplayMessage(tab = tab)
+            } else {
+                "${tab.openState.toDisplayMessage(tab = tab)}\n协议错误码：$errorCode · ${TabErrors.description(errorCode)}"
+            },
+            onBackToWorkbench = onBackToWorkbench
+        )
+        return
+    }
+    val registeredTab = OpenTabContainer.findByRoute(route = tab.manifest.route)
+    if (registeredTab != null) {
+        RegisteredTabHost(
+            modifier = modifier,
+            tab = tab,
+            registeredTab = registeredTab,
             onBackToWorkbench = onBackToWorkbench
         )
         return
@@ -1004,7 +1035,6 @@ private fun AnnouncementsPage(
                     announcementTitle = announcement.title
                     announcementContent = announcement.content
                     announcementPinned = announcement.pinned
-                    selectedAnnouncementId = null
                     showAnnouncementForm = true
                 },
                 onDelete = {
@@ -1026,7 +1056,7 @@ private fun AnnouncementsPage(
         }
         val editingAnnouncement = announcements.firstOrNull { item -> item.announcementId == editingAnnouncementId }
         if (showAnnouncementForm && editingAnnouncement != null) {
-            AnnouncementForm(
+            AnnouncementEditDialog(
                 title = "编辑公告",
                 primaryText = "保存",
                 announcementTitle = announcementTitle,
@@ -1350,18 +1380,28 @@ private fun ApprovalDetailDialog(
                     item = item,
                     comment = comment,
                     onCommentChange = { comment = it },
-                    showRejectConfirm = showRejectConfirm,
                     showCancelConfirm = showCancelConfirm,
                     onApprove = { onApprove(comment) },
                     onRejectClick = { showRejectConfirm = true },
-                    onRejectCancel = { showRejectConfirm = false },
-                    onRejectConfirm = { onReject(comment) },
                     onCancelApprovalClick = { showCancelConfirm = true },
                     onCancelApprovalCancel = { showCancelConfirm = false },
                     onCancelApprovalConfirm = { onCancelApproval(comment) }
                 )
             }
         }
+    }
+    if (showRejectConfirm) {
+        ApprovalConfirmDialog(
+            title = "确认驳回审批",
+            body = "驳回后发起人会看到审批被驳回和你填写的意见。",
+            confirmText = "确认驳回",
+            onClose = { showRejectConfirm = false },
+            onCancel = { showRejectConfirm = false },
+            onConfirm = {
+                showRejectConfirm = false
+                onReject(comment)
+            }
+        )
     }
 }
 
@@ -1421,12 +1461,9 @@ private fun ApprovalOperationBlock(
     item: OpenApprovalItem,
     comment: String,
     onCommentChange: (String) -> Unit,
-    showRejectConfirm: Boolean,
     showCancelConfirm: Boolean,
     onApprove: () -> Unit,
     onRejectClick: () -> Unit,
-    onRejectCancel: () -> Unit,
-    onRejectConfirm: () -> Unit,
     onCancelApprovalClick: () -> Unit,
     onCancelApprovalCancel: () -> Unit,
     onCancelApprovalConfirm: () -> Unit
@@ -1443,7 +1480,8 @@ private fun ApprovalOperationBlock(
                     BusinessActionButton(
                         modifier = Modifier.weight(weight = 1f),
                         text = "驳回",
-                        primary = false,
+                        primary = true,
+                        danger = true,
                         onClick = onRejectClick
                     )
                     BusinessActionButton(
@@ -1451,15 +1489,6 @@ private fun ApprovalOperationBlock(
                         text = "通过",
                         primary = true,
                         onClick = onApprove
-                    )
-                }
-                if (showRejectConfirm) {
-                    ApprovalInlineConfirm(
-                        title = "确认驳回审批",
-                        body = "驳回后发起人会看到审批被驳回和你填写的意见。",
-                        confirmText = "确认驳回",
-                        onCancel = onRejectCancel,
-                        onConfirm = onRejectConfirm
                     )
                 }
             }
@@ -1522,6 +1551,64 @@ private fun ApprovalInlineConfirm(
             onCancelClick = onCancel,
             onPrimaryClick = onConfirm
         )
+    }
+}
+
+@Composable
+private fun ApprovalConfirmDialog(
+    title: String,
+    body: String,
+    confirmText: String,
+    onClose: () -> Unit,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Dialog(onDismissRequest = onClose) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape = RoundedCornerShape(size = 8.dp))
+                .background(color = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(space = 12.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    modifier = Modifier.weight(weight = 1f),
+                    text = title,
+                    fontSize = 17.sp,
+                    lineHeight = 21.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+                )
+                IconButton(
+                    modifier = Modifier.size(size = 34.dp),
+                    onClick = onClose
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "关闭确认弹窗",
+                        tint = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+                    )
+                }
+            }
+            Text(
+                text = body,
+                fontSize = 14.sp,
+                lineHeight = 19.sp,
+                color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+            )
+            FormActionRow(
+                primaryText = confirmText,
+                onCancelClick = onCancel,
+                onPrimaryClick = onConfirm
+            )
+        }
     }
 }
 
@@ -1639,6 +1726,253 @@ private fun ExternalTabPlaceholderPage(
     }
 }
 
+@Composable
+private fun RegisteredTabHost(
+    modifier: Modifier,
+    tab: OpenTabItem,
+    registeredTab: RegisteredOpenTab,
+    onBackToWorkbench: (() -> Unit)?
+) {
+    var lifecycleError by remember(tab.id) { mutableStateOf<String?>(null) }
+    RegisteredTabLifecycleEffect(
+        registeredTab = registeredTab,
+        onError = { message ->
+            lifecycleError = message
+        }
+    )
+    LaunchedEffect(registeredTab.definition.route) {
+        OpenTabContainer.switchTab(route = registeredTab.definition.route)
+    }
+    if (lifecycleError != null) {
+        OpenStatePage(
+            modifier = modifier,
+            title = tab.displayName,
+            message = lifecycleError.orEmpty(),
+            onBackToWorkbench = onBackToWorkbench
+        )
+        return
+    }
+    OpenTabScaffold(
+        modifier = modifier,
+        tab = tab,
+        registeredTab = registeredTab,
+        onBackToWorkbench = onBackToWorkbench
+    ) {
+        registeredTab.page()
+        registeredTab.definition.extension?.bottomPanel?.let { bottomPanel ->
+            SectionCard(
+                title = "底部扩展区",
+                body = "默认高度 ${bottomPanel.defaultHeight}dp，内容由业务方通过协议提供。"
+            )
+            bottomPanel.content()
+        }
+    }
+}
+
+@Composable
+private fun RegisteredTabLifecycleEffect(
+    registeredTab: RegisteredOpenTab,
+    onError: (String) -> Unit
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val configuration = LocalConfiguration.current
+    DisposableEffect(registeredTab.definition.id, lifecycleOwner) {
+        fun dispatch(name: String, callback: () -> Unit) {
+            val startTime = SystemClock.elapsedRealtime()
+            runCatching(callback).onFailure { throwable ->
+                onError(
+                    "协议错误码：${TabErrors.LIFECYCLE_EXCEPTION} · ${TabErrors.description(TabErrors.LIFECYCLE_EXCEPTION)}\n" +
+                        "生命周期 $name 执行异常：${throwable.message ?: "未知异常"}"
+                )
+            }
+            val cost = SystemClock.elapsedRealtime() - startTime
+            if (cost > TabErrors.CALLBACK_TIMEOUT_MS) {
+                onError(
+                    "协议错误码：${TabErrors.LIFECYCLE_TIMEOUT} · ${TabErrors.description(TabErrors.LIFECYCLE_TIMEOUT)}\n" +
+                        "生命周期 $name 耗时 ${cost}ms，超过 ${TabErrors.CALLBACK_TIMEOUT_MS}ms。"
+                )
+            }
+        }
+
+        dispatch(name = "onCreate") {
+            registeredTab.lifecycle.onCreate(Bundle())
+        }
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            dispatch(name = "onResume") {
+                registeredTab.lifecycle.onResume()
+            }
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> dispatch(name = "onResume") {
+                    registeredTab.lifecycle.onResume()
+                }
+                Lifecycle.Event.ON_PAUSE -> dispatch(name = "onPause") {
+                    registeredTab.lifecycle.onPause()
+                }
+                Lifecycle.Event.ON_DESTROY -> dispatch(name = "onDestroy") {
+                    registeredTab.lifecycle.onDestroy()
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            dispatch(name = "onDestroy") {
+                registeredTab.lifecycle.onDestroy()
+            }
+        }
+    }
+    LaunchedEffect(configuration, registeredTab.definition.id) {
+        registeredTab.lifecycle.onConfigChange(
+            Configuration(configuration).apply {
+                setTo(configuration)
+            }
+        )
+    }
+}
+
+@Composable
+fun ProtocolGuideTabPage() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(space = 12.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        SectionCard(
+            title = "业务接入三件套",
+            body = "业务方先写页面，再提供 TabDefinition、TabLifecycle 和页面函数。容器收到后负责校验、展示入口、切换路由和调生命周期。"
+        )
+        ProtocolStepRow(
+            index = "1",
+            title = "定义 TabDefinition",
+            body = "填写 id、displayName、icon、route、version、minContainerVersion 和 permissions。"
+        )
+        ProtocolStepRow(
+            index = "2",
+            title = "注册到容器",
+            body = "调用 registerTab(definition, lifecycle, page)，容器会检查重复 ID、容器版本和路由格式。"
+        )
+        ProtocolStepRow(
+            index = "3",
+            title = "点击后渲染",
+            body = "用户点击工作台图标后，容器按 route 找到注册页面并渲染，同时触发 onCreate/onResume/onPause/onDestroy。"
+        )
+        SectionCard(
+            title = "当前示例状态",
+            body = "该页面就是通过协议注册进入工作台的示例 Tab。它不是硬编码 route 页面，而是由容器注册表动态找到并展示。"
+        )
+        ProtocolFieldGrid()
+    }
+}
+
+@Composable
+private fun ProtocolStepRow(
+    index: String,
+    title: String,
+    body: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(size = 8.dp))
+            .background(color = AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(space = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(size = 28.dp)
+                .clip(shape = RoundedCornerShape(size = 8.dp))
+                .background(color = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = index,
+                fontSize = 13.sp,
+                lineHeight = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+        Column(
+            modifier = Modifier.weight(weight = 1f),
+            verticalArrangement = Arrangement.spacedBy(space = 5.dp)
+        ) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                lineHeight = 19.sp,
+                fontWeight = FontWeight.Bold,
+                color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+            )
+            Text(
+                text = body,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProtocolFieldGrid() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape = RoundedCornerShape(size = 8.dp))
+            .background(color = AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(space = 8.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = "字段校验",
+            fontSize = 16.sp,
+            lineHeight = 19.sp,
+            fontWeight = FontWeight.Bold,
+            color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+        )
+        ProtocolFieldRow(name = "id", value = "唯一编号，防止两个业务入口冲突")
+        ProtocolFieldRow(name = "displayName", value = "展示名称，不能为空且不超过 16 字")
+        ProtocolFieldRow(name = "icon", value = "工作台入口图标，帮助用户快速识别业务")
+        ProtocolFieldRow(name = "route", value = "点击后的业务地址，必须以 / 开头")
+        ProtocolFieldRow(name = "version", value = "业务版本，用于后续升级和排查")
+        ProtocolFieldRow(name = "minContainerVersion", value = "最低容器版本，防止老客户端硬打开新能力")
+    }
+}
+
+@Composable
+private fun ProtocolFieldRow(
+    name: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(space = 10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            modifier = Modifier.weight(weight = 0.42f),
+            text = name,
+            fontSize = 13.sp,
+            lineHeight = 17.sp,
+            fontWeight = FontWeight.Bold,
+            color = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color
+        )
+        Text(
+            modifier = Modifier.weight(weight = 0.58f),
+            text = value,
+            fontSize = 13.sp,
+            lineHeight = 17.sp,
+            color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+        )
+    }
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun WebTabPage(
@@ -1647,11 +1981,32 @@ private fun WebTabPage(
     onBackToWorkbench: (() -> Unit)?
 ) {
     val entryUri = tab.manifest.entryUri.orEmpty()
+    val allowedHosts = remember(entryUri, tab.manifest.extraConfig) {
+        tab.manifest.extraConfig.toAllowedWebHosts(entryUri = entryUri)
+    }
+    val fallbackUrl = remember(entryUri, tab.manifest.extraConfig) {
+        tab.manifest.extraConfig.toFallbackAssetUrl()
+    }
+    var usingFallback by remember(entryUri) { mutableStateOf(false) }
+    val targetUrl = if (usingFallback) fallbackUrl ?: entryUri else entryUri
     var loading by remember(entryUri) { mutableStateOf(true) }
     var errorMessage by remember(entryUri) { mutableStateOf<String?>(null) }
+    var fallbackMessage by remember(entryUri) { mutableStateOf<String?>(null) }
     var webView by remember(entryUri) { mutableStateOf<WebView?>(null) }
     var canGoBack by remember(entryUri) { mutableStateOf(false) }
     var currentUrl by remember(entryUri) { mutableStateOf(entryUri) }
+    fun switchToFallback(view: WebView?, message: String) {
+        if (fallbackUrl != null && !usingFallback) {
+            usingFallback = true
+            loading = true
+            errorMessage = null
+            fallbackMessage = message
+            view?.loadUrl(fallbackUrl)
+        } else {
+            loading = false
+            errorMessage = message
+        }
+    }
     BackHandler(enabled = canGoBack) {
         webView?.goBack()
     }
@@ -1675,6 +2030,7 @@ private fun WebTabPage(
                 horizontalArrangement = Arrangement.spacedBy(space = 8.dp)
             ) {
                 SmallIconButton(
+                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
                     text = "网页返回",
                     enabled = canGoBack,
                     onClick = {
@@ -1682,12 +2038,23 @@ private fun WebTabPage(
                     }
                 )
                 SmallIconButton(
+                    icon = Icons.Rounded.Refresh,
                     text = "重新加载",
                     onClick = {
+                        usingFallback = false
                         loading = true
                         errorMessage = null
-                        webView?.reload()
+                        fallbackMessage = null
+                        webView?.loadUrl(entryUri)
                     }
+                )
+            }
+            fallbackMessage?.let { message ->
+                Text(
+                    text = message,
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    color = Color(color = 0xFFB45309)
                 )
             }
         }
@@ -1720,11 +2087,12 @@ private fun WebTabPage(
                                 view: WebView?,
                                 request: WebResourceRequest?
                             ): Boolean {
-                                val nextUrl = request?.url?.toString().orEmpty()
-                                if (nextUrl.startsWith("http://") || nextUrl.startsWith("https://")) {
+                                val nextUri = request?.url ?: return false
+                                if (nextUri.isAllowedWebNavigation(allowedHosts = allowedHosts)) {
                                     return false
                                 }
-                                errorMessage = "已拦截外部链接：$nextUrl"
+                                val blockedTarget = nextUri.host.orEmpty().ifBlank { nextUri.scheme.orEmpty() }
+                                errorMessage = "已拦截非白名单链接：$blockedTarget"
                                 return true
                             }
 
@@ -1740,27 +2108,62 @@ private fun WebTabPage(
                                 error: WebResourceError?
                             ) {
                                 if (request?.isForMainFrame == true) {
-                                    loading = false
                                     canGoBack = view?.canGoBack() == true
-                                    errorMessage = error?.description?.toString() ?: "网页加载失败"
+                                    val message = error?.description?.toString()?.ifBlank { null } ?: "网页加载失败"
+                                    if (fallbackUrl != null && !usingFallback) {
+                                        switchToFallback(
+                                            view = view,
+                                            message = "外部页面不可用，已切换到本地短视频演示。"
+                                        )
+                                    } else {
+                                        loading = false
+                                        errorMessage = message
+                                    }
+                                }
+                            }
+
+                            override fun onReceivedHttpError(
+                                view: WebView?,
+                                request: WebResourceRequest?,
+                                errorResponse: WebResourceResponse?
+                            ) {
+                                val statusCode = errorResponse?.statusCode ?: return
+                                if (request?.isForMainFrame == true && statusCode >= 400) {
+                                    canGoBack = view?.canGoBack() == true
+                                    if (fallbackUrl != null && !usingFallback) {
+                                        switchToFallback(
+                                            view = view,
+                                            message = "外部页面返回 $statusCode，已切换到本地短视频演示。"
+                                        )
+                                    } else {
+                                        loading = false
+                                        errorMessage = "网页返回异常状态：$statusCode"
+                                    }
                                 }
                             }
                         }
+                        isVerticalScrollBarEnabled = false
+                        isHorizontalScrollBarEnabled = false
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         settings.mediaPlaybackRequiresUserGesture = false
                         settings.cacheMode = WebSettings.LOAD_DEFAULT
                         settings.useWideViewPort = true
                         settings.loadWithOverviewMode = true
+                        settings.loadsImagesAutomatically = true
+                        settings.javaScriptCanOpenWindowsAutomatically = false
+                        settings.setSupportZoom(false)
+                        settings.builtInZoomControls = false
+                        settings.displayZoomControls = false
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                        loadUrl(entryUri)
+                        loadUrl(targetUrl)
                     }
                 },
                 update = { webView ->
-                    if (webView.url != entryUri) {
+                    if (webView.url != targetUrl) {
                         loading = true
                         errorMessage = null
-                        webView.loadUrl(entryUri)
+                        webView.loadUrl(targetUrl)
                     }
                 }
             )
@@ -1780,11 +2183,56 @@ private fun WebTabPage(
     }
 }
 
+private fun Map<String, String>.toAllowedWebHosts(entryUri: String): Set<String> {
+    val configuredHosts = get("allowedHosts")
+        ?.split(",", ";")
+        ?.map { host -> host.normalizedWebHost() }
+        ?.filter { host -> host.isNotBlank() && host != "unknown" }
+        .orEmpty()
+    val entryHost = runCatching {
+        android.net.Uri.parse(entryUri).host.orEmpty().normalizedWebHost()
+    }.getOrDefault("")
+    return (configuredHosts + entryHost).filter { host -> host.isNotBlank() }.toSet()
+}
+
+private fun Map<String, String>.toFallbackAssetUrl(): String? {
+    val asset = get("fallbackAsset")
+        ?.trim()
+        ?.trimStart('/')
+        ?.takeIf { it.isNotBlank() && !it.contains("..") }
+        ?: return null
+    return "file:///android_asset/$asset"
+}
+
+private fun android.net.Uri.isAllowedWebNavigation(allowedHosts: Set<String>): Boolean {
+    val normalizedScheme = scheme.orEmpty().lowercase()
+    if (normalizedScheme == "file") {
+        return toString().startsWith(prefix = "file:///android_asset/")
+    }
+    if (normalizedScheme == "about" || normalizedScheme == "data") {
+        return true
+    }
+    if (normalizedScheme != "http" && normalizedScheme != "https") {
+        return false
+    }
+    val requestHost = host.orEmpty().normalizedWebHost()
+    return allowedHosts.isEmpty() || allowedHosts.any { allowedHost ->
+        requestHost == allowedHost || requestHost.endsWith(suffix = ".$allowedHost")
+    }
+}
+
+private fun String.normalizedWebHost(): String {
+    return trim()
+        .lowercase()
+        .removePrefix("www.")
+}
+
 @Composable
 private fun OpenTabScaffold(
     modifier: Modifier,
     tab: OpenTabItem,
     onBackToWorkbench: (() -> Unit)?,
+    registeredTab: RegisteredOpenTab? = null,
     scrollState: ScrollState = rememberScrollState(),
     titleOverride: String? = null,
     backTextOverride: String? = null,
@@ -1806,6 +2254,7 @@ private fun OpenTabScaffold(
         OpenTabHeader(
             tab = tab,
             onBackToWorkbench = onBackToWorkbench,
+            registeredTab = registeredTab,
             titleOverride = titleOverride,
             backTextOverride = backTextOverride,
             centerTitle = centerTitle,
@@ -1813,6 +2262,33 @@ private fun OpenTabScaffold(
             iconOnlyBack = iconOnlyBack
         )
         content()
+        registeredTab?.definition?.extension?.fab?.let { fab ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shape = RoundedCornerShape(size = 8.dp))
+                    .background(color = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color)
+                    .clickable(onClick = fab.onClick)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    modifier = Modifier.size(size = 18.dp),
+                    imageVector = fab.icon,
+                    contentDescription = null,
+                    tint = Color.White
+                )
+                Text(
+                    modifier = Modifier.padding(start = 8.dp),
+                    text = fab.label,
+                    fontSize = 14.sp,
+                    lineHeight = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
     }
 }
 
@@ -1820,6 +2296,7 @@ private fun OpenTabScaffold(
 private fun OpenTabHeader(
     tab: OpenTabItem,
     onBackToWorkbench: (() -> Unit)?,
+    registeredTab: RegisteredOpenTab? = null,
     titleOverride: String? = null,
     backTextOverride: String? = null,
     centerTitle: Boolean = true,
@@ -1887,8 +2364,104 @@ private fun OpenTabHeader(
                 fontWeight = FontWeight.Bold,
                 color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
             )
+            if (registeredTab != null) {
+                Text(
+                    text = "协议注册 · ${registeredTab.definition.version}",
+                    fontSize = 11.sp,
+                    lineHeight = 13.sp,
+                    color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+                )
+            }
         }
-        if (centerTitle) {
+        if (registeredTab != null) {
+            ProtocolHeaderActions(registeredTab = registeredTab)
+        } else if (centerTitle) {
+            Box(modifier = Modifier.size(size = 36.dp))
+        }
+    }
+}
+
+@Composable
+private fun ProtocolHeaderActions(registeredTab: RegisteredOpenTab) {
+    val titleBar = registeredTab.definition.extension?.titleBar
+    var menuExpanded by remember { mutableStateOf(false) }
+    val menuItems = titleBar?.menuItems.orEmpty()
+    val rightIcon = titleBar?.rightIcon
+    val rightText = titleBar?.rightText
+    when {
+        menuItems.isNotEmpty() -> {
+            Box {
+                Row(
+                    modifier = Modifier
+                        .clip(shape = RoundedCornerShape(size = 999.dp))
+                        .background(color = AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color)
+                        .clickable { menuExpanded = true }
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(space = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = rightText ?: "更多",
+                        fontSize = 12.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color
+                    )
+                    Icon(
+                        modifier = Modifier.size(size = 16.dp),
+                        imageVector = Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    menuItems.forEach { item ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(text = item.label)
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                item.onClick()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        rightIcon != null -> {
+            Box(
+                modifier = Modifier
+                    .size(size = 36.dp)
+                    .clip(shape = RoundedCornerShape(size = 999.dp))
+                    .background(color = AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    modifier = Modifier.size(size = 18.dp),
+                    imageVector = rightIcon,
+                    contentDescription = null,
+                    tint = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color
+                )
+            }
+        }
+        rightText?.isNotBlank() == true -> {
+            Text(
+                modifier = Modifier
+                    .clip(shape = RoundedCornerShape(size = 999.dp))
+                    .background(color = AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                text = rightText,
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color
+            )
+        }
+        else -> {
             Box(modifier = Modifier.size(size = 36.dp))
         }
     }
@@ -4148,6 +4721,75 @@ private fun AnnouncementForm(
 }
 
 @Composable
+private fun AnnouncementEditDialog(
+    title: String,
+    primaryText: String,
+    announcementTitle: String,
+    onAnnouncementTitleChange: (String) -> Unit,
+    announcementContent: String,
+    onAnnouncementContentChange: (String) -> Unit,
+    pinned: Boolean,
+    onPinnedChange: () -> Unit,
+    onCancelClick: () -> Unit,
+    onPrimaryClick: () -> Unit
+) {
+    Dialog(onDismissRequest = onCancelClick) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 560.dp)
+                .clip(shape = RoundedCornerShape(size = 8.dp))
+                .background(color = AppTheme.colorScheme.c_FFFFFFFF_FF101010.color)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(space = 12.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    modifier = Modifier.weight(weight = 1f),
+                    text = title,
+                    fontSize = 17.sp,
+                    lineHeight = 21.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppTheme.colorScheme.c_FF001018_DEFFFFFF.color
+                )
+                IconButton(
+                    modifier = Modifier.size(size = 34.dp),
+                    onClick = onCancelClick
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "关闭编辑公告",
+                        tint = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(state = rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(space = 12.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                TeamTextField(value = announcementTitle, onValueChange = onAnnouncementTitleChange, label = "公告标题")
+                TeamTextField(value = announcementContent, onValueChange = onAnnouncementContentChange, label = "公告内容")
+                FilterChipButton(text = "置顶公告", selected = pinned, onClick = onPinnedChange)
+                FormActionRow(
+                    primaryText = primaryText,
+                    primaryEnabled = announcementTitle.isNotBlank() && announcementContent.isNotBlank(),
+                    onCancelClick = onCancelClick,
+                    onPrimaryClick = onPrimaryClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun DateTimePickerField(
     label: String,
     value: String,
@@ -4481,17 +5123,21 @@ private fun BusinessActionButton(
     modifier: Modifier = Modifier,
     text: String,
     primary: Boolean,
+    danger: Boolean = false,
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     val primaryColor = AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color
+    val dangerColor = Color(color = 0xFFE5484D)
     val backgroundColor = when {
         !enabled -> AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color.copy(alpha = 0.5f)
+        danger -> dangerColor
         primary -> primaryColor
         else -> AppTheme.colorScheme.c_FFEFF1F3_FF22202A.color
     }
     val textColor = when {
         !enabled -> AppTheme.colorScheme.c_FF384F60_99FFFFFF.color.copy(alpha = 0.65f)
+        danger -> Color.White
         primary -> Color.White
         else -> AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
     }
@@ -4516,6 +5162,7 @@ private fun BusinessActionButton(
 
 @Composable
 private fun SmallIconButton(
+    icon: ImageVector = Icons.Rounded.Refresh,
     text: String,
     enabled: Boolean = true,
     onClick: () -> Unit
@@ -4537,7 +5184,7 @@ private fun SmallIconButton(
     ) {
         Icon(
             modifier = Modifier.size(size = 16.dp),
-            imageVector = Icons.Rounded.Refresh,
+            imageVector = icon,
             contentDescription = null,
             tint = if (enabled) {
                 AppTheme.colorScheme.c_FF42A5F5_FF26A69A.color

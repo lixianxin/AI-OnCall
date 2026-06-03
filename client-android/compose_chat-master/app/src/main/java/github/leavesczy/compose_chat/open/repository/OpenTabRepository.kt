@@ -4,6 +4,8 @@ import github.leavesczy.compose_chat.open.config.OpenApiConfig
 import github.leavesczy.compose_chat.open.model.ApprovalSummaryResponse
 import github.leavesczy.compose_chat.open.model.CreateCustomWebTabRequest
 import github.leavesczy.compose_chat.open.model.EntryType
+import github.leavesczy.compose_chat.open.model.FabExtensionDto
+import github.leavesczy.compose_chat.open.model.MenuItemDto
 import github.leavesczy.compose_chat.open.model.OpenBusinessPermissions
 import github.leavesczy.compose_chat.open.model.OpenBusinessTabIds
 import github.leavesczy.compose_chat.open.model.SemanticVersionDto
@@ -17,10 +19,12 @@ import github.leavesczy.compose_chat.open.network.OpenApiClient
 import github.leavesczy.compose_chat.open.network.OpenApiResult
 import github.leavesczy.compose_chat.open.network.OpenJsonParser
 import github.leavesczy.compose_chat.open.session.OpenSessionManager
+import github.leavesczy.compose_chat.open.tab.OpenTabContainer
 import github.leavesczy.compose_chat.open.tab.OpenTabItem
 import github.leavesczy.compose_chat.open.tab.OpenTabRegistry
 import github.leavesczy.compose_chat.open.tab.OpenTabSource
 import github.leavesczy.compose_chat.open.tab.OpenTabState
+import github.leavesczy.compose_chat.open.tab.RegisteredOpenTab
 import org.json.JSONObject
 
 class OpenTabRepository(
@@ -58,6 +62,12 @@ class OpenTabRepository(
             .put("entryType", "web")
             .put("entryUri", request.entryUri)
             .put("minContainerVersion", request.minContainerVersion)
+        request.sortOrder?.let { sortOrder ->
+            body.put("sortOrder", sortOrder)
+        }
+        if (request.extraConfig.isNotEmpty()) {
+            body.put("extraConfig", JSONObject(request.extraConfig))
+        }
         return apiClient.postJson(path = "/tabs", json = body).map(OpenJsonParser::parseTabMutation)
     }
 
@@ -106,20 +116,24 @@ class OpenTabRepository(
             manifests
         }
         val normalizedManifests = sourceManifests.withClientBuiltInTabs()
-            .filter { manifest -> permissions.containsAll(manifest.permissions) }
+            .withProtocolRegisteredTabs()
             .map { manifest -> manifest.withClientDisplayOverrides() }
         return normalizedManifests.sortedBy { it.sortOrder }.map { manifest ->
+            val registeredTab = OpenTabContainer.findById(tabId = manifest.id)
             OpenTabItem(
                 manifest = manifest,
                 openState = resolveState(manifest = manifest, permissions = permissions),
-                icon = OpenTabRegistry.iconOf(icon = manifest.icon),
+                icon = registeredTab?.definition?.icon ?: OpenTabRegistry.iconOf(icon = manifest.icon),
                 source = manifest.resolveSource(remoteLoaded = remoteLoaded)
             )
         }
     }
 
     private fun TabManifest.resolveSource(remoteLoaded: Boolean): OpenTabSource {
-        if (id == CLIENT_BUILT_IN_AI_ONCALL || id == CLIENT_BUILT_IN_BILIBILI_WEB) {
+        if (OpenTabContainer.findById(tabId = id) != null) {
+            return OpenTabSource.ProtocolRegistered
+        }
+        if (id == CLIENT_BUILT_IN_AI_ONCALL || id == CLIENT_BUILT_IN_BILIBILI_WEB || id == CLIENT_BUILT_IN_TIKTOK_SHORT_VIDEO) {
             return OpenTabSource.ClientBuiltIn
         }
         return if (remoteLoaded) {
@@ -143,7 +157,16 @@ class OpenTabRepository(
         manifest: TabManifest,
         permissions: Set<String>
     ): OpenTabState {
-        if (manifest.id.isBlank() || manifest.displayName.isBlank() || manifest.route.isBlank()) {
+        if (
+            manifest.id.isBlank() ||
+            manifest.displayName.isBlank() ||
+            manifest.icon.isNullOrBlank() ||
+            manifest.route.isBlank() ||
+            !manifest.route.startsWith("/") ||
+            manifest.version.major < 0 ||
+            manifest.version.minor < 0 ||
+            manifest.version.patch < 0
+        ) {
             return OpenTabState.InvalidConfig
         }
         if (!manifest.enabled) {
@@ -171,12 +194,25 @@ class OpenTabRepository(
             // 后续服务端下发同 id 时自动使用服务端版本，避免客户端和服务端重复展示。
             tabs = tabs + OpenMockData.bilibiliWebTab()
         }
+        if (tabs.none { it.id == CLIENT_BUILT_IN_TIKTOK_SHORT_VIDEO }) {
+            tabs = tabs + OpenMockData.tiktokShortVideoTab()
+        }
         if (tabs.none { it.id == CLIENT_BUILT_IN_AI_ONCALL }) {
             // 当前服务端 /tabs 尚未下发 AI oncall，但客户端底部已将它作为一级入口。
             // 先以内置 Tab 补齐入口，后续服务端补充 ai-oncall 后这里会自动去重并使用服务端配置。
             tabs = tabs + OpenMockData.aiOncallTab()
         }
         return tabs
+    }
+
+    private fun List<TabManifest>.withProtocolRegisteredTabs(): List<TabManifest> {
+        val manifestIds = map { manifest -> manifest.id }.toSet()
+        val registeredManifests = OpenTabContainer.getRegisteredOpenTabs()
+            .filterNot { registeredTab -> registeredTab.definition.id in manifestIds }
+            .mapIndexed { index, registeredTab ->
+                registeredTab.toManifest(sortOrder = PROTOCOL_REGISTERED_SORT_ORDER + index)
+            }
+        return this + registeredManifests
     }
 
     private fun List<TabManifest>.withTargetBusinessTabs(): List<TabManifest> {
@@ -283,10 +319,52 @@ class OpenTabRepository(
         )
     }
 
+    private fun RegisteredOpenTab.toManifest(sortOrder: Int): TabManifest {
+        val definition = definition
+        return TabManifest(
+            id = definition.id,
+            displayName = definition.displayName,
+            description = "通过客户端协议注册的业务 Tab。",
+            icon = definition.id,
+            route = definition.route,
+            entryType = EntryType.Native,
+            entryUri = null,
+            version = SemanticVersionDto(
+                major = definition.version.major,
+                minor = definition.version.minor,
+                patch = definition.version.patch
+            ),
+            minContainerVersion = definition.minContainerVersion,
+            permissions = definition.permissions,
+            enabled = true,
+            sortOrder = sortOrder,
+            extension = TabExtensionDto(
+                titleBar = definition.extension?.titleBar?.let { titleBar ->
+                    TitleBarExtensionDto(
+                        rightText = titleBar.rightText,
+                        menuItems = titleBar.menuItems.map { item ->
+                            MenuItemDto(id = item.id, label = item.label)
+                        }
+                    )
+                },
+                fab = definition.extension?.fab?.let { fab ->
+                    FabExtensionDto(
+                        id = "protocol-${definition.id}-fab",
+                        icon = null,
+                        label = fab.label
+                    )
+                }
+            ),
+            extraConfig = mapOf("source" to "protocol")
+        )
+    }
+
     private companion object {
 
         const val CLIENT_BUILT_IN_AI_ONCALL = "ai-oncall"
         const val CLIENT_BUILT_IN_BILIBILI_WEB = "bilibili-web"
+        const val CLIENT_BUILT_IN_TIKTOK_SHORT_VIDEO = "tiktok-short-video"
+        const val PROTOCOL_REGISTERED_SORT_ORDER = 80
 
     }
 
