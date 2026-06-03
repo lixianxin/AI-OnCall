@@ -7,3 +7,4 @@
 .gradle
 .DS_Store
 /.kotlin/
+protocol/build/

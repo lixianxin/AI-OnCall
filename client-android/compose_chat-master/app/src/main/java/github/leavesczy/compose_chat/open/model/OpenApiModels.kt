@@ -110,7 +110,9 @@ data class CreateCustomWebTabRequest(
     val icon: String,
     val route: String,
     val entryUri: String,
-    val minContainerVersion: Int = 1
+    val minContainerVersion: Int = 1,
+    val sortOrder: Int? = null,
+    val extraConfig: Map<String, String> = emptyMap()
 )
 
 data class UpdateCustomWebTabRequest(

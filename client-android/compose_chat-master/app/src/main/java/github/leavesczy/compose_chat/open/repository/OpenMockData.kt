@@ -59,6 +59,7 @@ object OpenMockData {
                 sortOrder = 40
             ),
             bilibiliWebTab(),
+            tiktokShortVideoTab(),
             tab(
                 id = "ai-oncall",
                 displayName = "AI oncall",
@@ -107,6 +108,26 @@ object OpenMockData {
         )
     }
 
+    fun tiktokShortVideoTab(): TabManifest {
+        return tab(
+            id = "tiktok-short-video",
+            displayName = "TikTok 短视频",
+            description = "通过 Web 页面容器接入 TikTok 网页，用于演示短视频滑动浏览和基础播放。",
+            icon = "video",
+            route = "/tiktok",
+            entryType = EntryType.Web,
+            entryUri = "https://www.tiktok.com/zh-Hans",
+            permissions = emptyList(),
+            sortOrder = 48,
+            extraConfig = mapOf(
+                "containerType" to "web",
+                "category" to "leisure",
+                "allowedHosts" to "tiktok.com",
+                "fallbackAsset" to "short_video_fallback.html"
+            )
+        )
+    }
+
     fun aiOncallTab(): TabManifest {
         return tab(
             id = "ai-oncall",
@@ -131,7 +152,8 @@ object OpenMockData {
         sortOrder: Int,
         entryUri: String? = null,
         minContainerVersion: Int = 1,
-        rightText: String? = null
+        rightText: String? = null,
+        extraConfig: Map<String, String> = emptyMap()
     ): TabManifest {
         return TabManifest(
             id = id,
@@ -153,7 +175,7 @@ object OpenMockData {
                 ),
                 fab = null
             ),
-            extraConfig = emptyMap()
+            extraConfig = extraConfig
         )
     }
 
