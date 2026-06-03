@@ -24,8 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -45,7 +43,6 @@ import androidx.compose.ui.unit.sp
 import github.leavesczy.compose_chat.R
 import github.leavesczy.compose_chat.open.repository.OpenAvatarRepository
 import github.leavesczy.compose_chat.ui.logic.OpenProfileViewState
-import github.leavesczy.compose_chat.ui.theme.AppTheme
 import github.leavesczy.compose_chat.ui.widgets.ComponentImage
 import github.leavesczy.compose_chat.ui.widgets.CommonButton
 
@@ -86,10 +83,7 @@ fun OpenProfilePage(
         if (viewState.errorMessage != null) {
             ErrorCard(viewState = viewState)
         }
-        ServiceStatusCard(viewState = viewState)
-        BusinessSummaryCard(viewState = viewState)
-        PermissionCard(permissions = viewState.permissions)
-        DebugInfoCard(viewState = viewState)
+        AccountSummaryCard(viewState = viewState)
         ActionCard(viewState = viewState)
     }
 }
@@ -122,7 +116,7 @@ private fun ProfileHeader(
             horizontalAlignment = Alignment.Start
         ) {
             Text(
-                text = viewState.displayName,
+                text = viewState.realDisplayName(),
                 fontSize = 22.sp,
                 lineHeight = 25.sp,
                 fontWeight = FontWeight.Bold,
@@ -232,13 +226,14 @@ private fun ErrorCard(viewState: OpenProfileViewState) {
 }
 
 @Composable
-private fun ServiceStatusCard(viewState: OpenProfileViewState) {
-    SectionCard(title = "服务状态") {
-        InfoRow(label = "连接状态", value = viewState.serviceStatus, iconSuccess = true)
-        InfoRow(label = "运行模式", value = viewState.serviceMode)
-        InfoRow(label = "API 版本", value = viewState.apiVersion)
-        InfoRow(label = "SSE", value = viewState.sseAvailableText)
-        InfoRow(label = "服务时间", value = viewState.serverTime)
+private fun AccountSummaryCard(viewState: OpenProfileViewState) {
+    SectionCard(title = "账号状态") {
+        InfoRow(label = "服务连接", value = viewState.serviceStatus, iconSuccess = true)
+        InfoRow(label = "团队", value = viewState.teamName)
+        InfoRow(label = "角色", value = viewState.roleName)
+        if (viewState.serverTime != "-") {
+            InfoRow(label = "同步时间", value = viewState.serverTime)
+        }
     }
 }
 
@@ -272,10 +267,13 @@ private fun BusinessSummaryCard(viewState: OpenProfileViewState) {
 
 @Composable
 private fun PermissionCard(permissions: List<String>) {
-    SectionCard(title = "权限") {
-        if (permissions.isEmpty()) {
+    val displayPermissions = permissions
+        .map { permission -> permission.toDisplayPermissionName() }
+        .distinct()
+    SectionCard(title = "可用能力") {
+        if (displayPermissions.isEmpty()) {
             Text(
-                text = "当前账号没有业务权限。",
+                text = "当前账号暂无可用业务能力。",
                 fontSize = 14.sp,
                 lineHeight = 18.sp,
                 color = Color(color = 0xFF6B7280)
@@ -287,7 +285,7 @@ private fun PermissionCard(permissions: List<String>) {
                 horizontalArrangement = Arrangement.spacedBy(space = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(space = 8.dp)
             ) {
-                permissions.forEach { permission ->
+                displayPermissions.forEach { permission ->
                     PermissionChip(permission = permission)
                 }
             }
@@ -296,12 +294,29 @@ private fun PermissionCard(permissions: List<String>) {
 }
 
 @Composable
-private fun DebugInfoCard(viewState: OpenProfileViewState) {
+private fun CollapsibleDebugInfoCard(viewState: OpenProfileViewState) {
+    var expanded by remember { mutableStateOf(false) }
     SectionCard(title = "调试信息") {
-        // token 只展示掩码，方便联调确认登录态存在，同时避免在界面上暴露完整凭证。
-        InfoRow(label = "Base URL", value = viewState.baseUrl)
-        InfoRow(label = "Token", value = viewState.maskedToken)
-        InfoRow(label = "容器版本", value = viewState.containerVersion.toString())
+        Text(
+            modifier = Modifier
+                .clip(shape = RoundedCornerShape(size = 8.dp))
+                .background(color = Color(color = 0xFFF3F6FA))
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 12.dp, vertical = 9.dp),
+            text = if (expanded) "收起联调信息" else "展开联调信息",
+            fontSize = 13.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(color = 0xFF2563EB)
+        )
+        if (expanded) {
+            InfoRow(label = "Base URL", value = viewState.baseUrl)
+            InfoRow(label = "Token", value = viewState.maskedToken)
+            InfoRow(label = "容器版本", value = viewState.containerVersion.toString())
+            InfoRow(label = "API 版本", value = viewState.apiVersion)
+            InfoRow(label = "运行模式", value = viewState.serviceMode)
+            InfoRow(label = "SSE", value = viewState.sseAvailableText)
+        }
     }
 }
 
@@ -436,17 +451,11 @@ private fun PermissionChip(permission: String) {
         )
         Column {
             Text(
-                text = permission.toDisplayPermissionName(),
+                text = permission,
                 fontSize = 13.sp,
                 lineHeight = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(color = 0xFF111827)
-            )
-            Text(
-                text = permission,
-                fontSize = 11.sp,
-                lineHeight = 13.sp,
-                color = Color(color = 0xFF6B7280)
             )
         }
     }
@@ -454,10 +463,61 @@ private fun PermissionChip(permission: String) {
 
 private fun String.toDisplayPermissionName(): String {
     return when (this) {
+        "team.manage" -> "团队管理"
+        "team.all.read" -> "全部团队"
+        "team.member.read" -> "团队成员"
+        "tab.company.read" -> "公司介绍"
+        "tab.announcement.read" -> "公告"
+        "tab.announcement.write" -> "公告发布"
+        "tab.fun.read" -> "放松一刻"
         "tab.approval.read" -> "审批"
+        "tab.approval.create" -> "发起审批"
+        "tab.approval.approve" -> "处理审批"
+        "tab.approval.all" -> "全部审批"
         "tab.calendar.read" -> "日程"
+        "tab.calendar.create" -> "创建日程"
+        "tab.calendar.manage" -> "管理日程"
+        "tab.calendar.all" -> "全部日程"
+        "tab.admin.manage" -> "权限管理"
+        "tab.debug.read" -> "调试"
         "tab.finance.read" -> "财务"
         "ai.oncall" -> "AI oncall"
         else -> "业务权限"
+    }
+}
+
+private fun OpenProfileViewState.realDisplayName(): String {
+    val seedName = userId.toDemoRealNameByUserId()
+    return when {
+        seedName != null && displayName.isSeedRoleName() -> seedName
+        seedName != null && displayName.isBlank() -> seedName
+        displayName.isNotBlank() -> displayName
+        seedName != null -> seedName
+        else -> "未命名用户"
+    }
+}
+
+private fun String.isSeedRoleName(): Boolean {
+    return this == "产品主管" ||
+        this == "产品员工" ||
+        this == "运营主管" ||
+        this == "运营员工" ||
+        this == "部门主管" ||
+        this == "普通员工" ||
+        this == "演示账号" ||
+        this == "系统管理员" ||
+        this == "训练营用户"
+}
+
+private fun String.toDemoRealNameByUserId(): String? {
+    return when (this) {
+        "user-admin" -> "陈明"
+        "user-demo" -> "林一凡"
+        "user-guest" -> "访客用户"
+        "user-product-manager" -> "王睿"
+        "user-product-employee" -> "张晨"
+        "user-operation-manager" -> "赵宁"
+        "user-operation-employee" -> "李晓"
+        else -> null
     }
 }
