@@ -51,13 +51,7 @@ data class DebugStatusResponse(
     val apiVersion: String,
     val mockMode: Boolean,
     val sseAvailable: Boolean,
-    val tabCount: Int,
-    val database: DebugDatabaseDto?
-)
-
-data class DebugDatabaseDto(
-    val enabled: Boolean,
-    val type: String
+    val tabCount: Int
 )
 
 data class ApprovalSummaryResponse(
@@ -71,31 +65,7 @@ data class ApprovalItemDto(
     val title: String,
     val applicant: String,
     val status: String,
-    val createdAt: String,
-    val amount: Int? = null,
-    val reason: String? = null,
-    val comment: String? = null,
-    val updatedAt: String? = null
-)
-
-data class CalendarSummaryResponse(
-    val todayCount: Int,
-    val events: List<CalendarEventDto>
-)
-
-data class CalendarEventDto(
-    val id: String,
-    val title: String,
-    val description: String?,
-    val startTime: String,
-    val endTime: String,
-    val location: String?,
-    val participants: List<String>
-)
-
-data class DebugPermissionDto(
-    val code: String,
-    val description: String
+    val createdAt: String
 )
 
 data class SuccessResponse(
@@ -115,35 +85,10 @@ data class CreateCustomWebTabRequest(
     val extraConfig: Map<String, String> = emptyMap()
 )
 
-data class UpdateCustomWebTabRequest(
-    val displayName: String,
-    val description: String,
-    val icon: String,
-    val entryUri: String,
-    val sortOrder: Int? = null
-)
-
 data class TabMutationResponse(
     val success: Boolean,
     val tabId: String?,
     val tab: TabManifest?
-)
-
-data class OnCallSessionDto(
-    val sessionId: String,
-    val title: String,
-    val createdAt: String,
-    val updatedAt: String?,
-    val messageCount: Int?
-)
-
-data class OnCallMessageDto(
-    val messageId: String,
-    val sessionId: String,
-    val role: String,
-    val content: String,
-    val contentType: String,
-    val createdAt: String
 )
 
 data class OnCallToolEvent(

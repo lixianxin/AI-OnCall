@@ -457,7 +457,7 @@ private fun ApprovalPlaceholderPage(
 }
 
 @Composable
-private fun CalendarPlaceholderPage(
+private fun CompanyIntroPage(
     modifier: Modifier,
     tab: OpenTabItem,
     onBackToWorkbench: (() -> Unit)?,
@@ -504,6 +504,15 @@ private fun CalendarPlaceholderPage(
         eventParticipantIds = membersOf(teamId).map { member -> member.userId }
             .ifEmpty { listOf(profile.userId) }
     }
+    var announcements by remember { mutableStateOf<List<OpenAnnouncementItem>>(emptyList()) }
+    var selectedAnnouncementId by remember { mutableStateOf<String?>(null) }
+    var showAnnouncementForm by remember { mutableStateOf(false) }
+    var editingAnnouncementId by remember { mutableStateOf<String?>(null) }
+    var announcementTitle by remember { mutableStateOf("") }
+    var announcementContent by remember { mutableStateOf("") }
+    var announcementPinned by remember { mutableStateOf(false) }
+    var refreshKey by remember { mutableStateOf(0) }
+    var loadState by remember { mutableStateOf(BusinessLoadState()) }
 
     fun selectParticipantsScope(teamId: String = targetTeamId.ifBlank { defaultTeamId() }) {
         eventVisibility = OpenCalendarVisibility.Participants
@@ -862,6 +871,9 @@ private fun CompanyIntroPage(
     tab: OpenTabItem,
     onBackToWorkbench: (() -> Unit)?
 ) {
+    var selectedIndex by remember { mutableStateOf(0) }
+    var revealAnswer by remember { mutableStateOf(false) }
+    val joke = FunJokes[selectedIndex % FunJokes.size]
     OpenTabScaffold(modifier = modifier, tab = tab, onBackToWorkbench = onBackToWorkbench) {
         CompanyDocumentHero()
         CompanyDocumentSection(
@@ -4959,6 +4971,8 @@ private fun ParticipantSelector(
                     )
                 }
             }
+        } else if (centerTitle) {
+            Box(modifier = Modifier.size(size = 36.dp))
         }
     }
 }
