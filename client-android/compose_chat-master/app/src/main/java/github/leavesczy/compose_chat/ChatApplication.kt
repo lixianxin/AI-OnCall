@@ -3,6 +3,7 @@ package github.leavesczy.compose_chat
 import android.app.Application
 import github.leavesczy.compose_chat.base.utils.ContextProvider
 import github.leavesczy.compose_chat.open.session.OpenSessionManager
+import github.leavesczy.compose_chat.open.tab.OpenTabProtocolBootstrap
 import github.leavesczy.compose_chat.provider.AccountProvider
 import github.leavesczy.compose_chat.provider.AppThemeProvider
 import github.leavesczy.compose_chat.ui.logic.ComposeChat
@@ -21,6 +22,7 @@ class ChatApplication : Application() {
         AppThemeProvider.init(application = this)
         AccountProvider.init(application = this)
         OpenSessionManager.init(application = this)
+        OpenTabProtocolBootstrap.registerBuiltInTabs()
         ComposeChat.accountProvider.init(application = this)
         ImageUtils.init()
     }

@@ -52,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,6 +69,7 @@ import github.leavesczy.compose_chat.open.model.OnCallToolEvent
 import github.leavesczy.compose_chat.open.network.OpenApiResult
 import github.leavesczy.compose_chat.open.repository.OnCallStreamEvent
 import github.leavesczy.compose_chat.open.repository.OpenOnCallRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalDate
@@ -257,6 +260,27 @@ fun OpenOnCallPage(
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
+    fun isNearConversationEnd(): Boolean {
+        if (messages.isEmpty()) {
+            return true
+        }
+        val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: return true
+        return lastVisibleIndex >= messages.lastIndex - 1
+    }
+
+    fun scrollToConversationEnd(animated: Boolean = true) {
+        if (messages.isEmpty()) {
+            return
+        }
+        scope.launch {
+            if (animated) {
+                listState.animateScrollToItem(index = messages.lastIndex)
+            } else {
+                listState.scrollToItem(index = messages.lastIndex)
+            }
+        }
+    }
+
     suspend fun loadHistory(activeSessionId: String) {
         when (val historyResult = repository.messages(sessionId = activeSessionId)) {
             is OpenApiResult.Success -> {
@@ -296,6 +320,7 @@ fun OpenOnCallPage(
         }
         input = ""
         sending = true
+        messages.removeAll { item -> item.id.startsWith(prefix = "welcome") }
         messages += OnCallMessageUi.User(id = UUID.randomUUID().toString(), content = content)
         val assistantId = UUID.randomUUID().toString()
         messages += OnCallMessageUi.Assistant(
@@ -365,7 +390,7 @@ fun OpenOnCallPage(
                     messages.clear()
                     messages += OnCallMessageUi.Assistant(
                         id = "welcome-${result.data.sessionId}",
-                        content = "新会话已创建。你可以继续咨询 Tab 接入、接口错误或配置诊断问题。",
+                        content = "新会话已创建，可以开始提问。",
                         streaming = false,
                         failedMessage = null
                     )
@@ -422,7 +447,7 @@ fun OpenOnCallPage(
                     messages.clear()
                     messages += OnCallMessageUi.Assistant(
                         id = "welcome-${result.data.sessionId}",
-                        content = "新会话已创建。你可以继续咨询 Tab 接入、接口错误或配置诊断问题。",
+                        content = "新会话已创建，可以开始提问。",
                         streaming = false,
                         failedMessage = null
                     )
@@ -442,8 +467,13 @@ fun OpenOnCallPage(
     }
 
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(index = messages.lastIndex)
+        val latest = messages.lastOrNull()
+        if (
+            latest is OnCallMessageUi.User ||
+            latest is OnCallMessageUi.Assistant && latest.streaming ||
+            latest is OnCallMessageUi.Tool
+        ) {
+            scrollToConversationEnd()
         }
     }
 
@@ -458,7 +488,6 @@ fun OpenOnCallPage(
     ) {
         OnCallHeader(
             onBackToOnCallHome = onBackToOnCallHome,
-            sessionMode = sessionMode,
             sessionTitle = sessionTitle,
             onNewSession = ::resetSession
         )
@@ -492,6 +521,14 @@ fun OpenOnCallPage(
             value = input,
             sending = sending,
             onValueChange = { input = it },
+            onFocusInput = {
+                if (isNearConversationEnd()) {
+                    scope.launch {
+                        delay(timeMillis = 180)
+                        scrollToConversationEnd()
+                    }
+                }
+            },
             onSend = { sendMessage(input) }
         )
     }
@@ -500,82 +537,53 @@ fun OpenOnCallPage(
 @Composable
 private fun OnCallHeader(
     onBackToOnCallHome: (() -> Unit)?,
-    sessionMode: String,
     sessionTitle: String,
     onNewSession: () -> Unit
 ) {
+    val compactTitle = sessionTitle.toCompactSessionTitle()
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(space = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(space = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (onBackToOnCallHome != null) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .clip(shape = RoundedCornerShape(size = 999.dp))
+                    .size(size = 38.dp)
+                    .clip(shape = CircleShape)
                     .background(color = Color.White)
-                    .clickable(onClick = onBackToOnCallHome)
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(space = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .clickable(onClick = onBackToOnCallHome),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    modifier = Modifier.size(size = 18.dp),
+                    modifier = Modifier.size(size = 20.dp),
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = null,
+                    contentDescription = "返回 AI 助手",
                     tint = Color(color = 0xFF2563EB)
-                )
-                Text(
-                    text = "AI助手",
-                    fontSize = 13.sp,
-                    lineHeight = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(color = 0xFF2563EB)
                 )
             }
         }
-        Box(
-            modifier = Modifier
-                .clip(shape = RoundedCornerShape(size = 14.dp))
-                .background(color = Color(color = 0xFF2563EB))
-                .padding(all = 10.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.SmartToy,
-                contentDescription = null,
-                tint = Color.White
-            )
-        }
-        Column(
+        Text(
             modifier = Modifier.weight(weight = 1f),
-            verticalArrangement = Arrangement.spacedBy(space = 2.dp)
-        ) {
-            Text(
-                text = "AI oncall",
-                fontSize = 24.sp,
-                lineHeight = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(color = 0xFF111827)
-            )
-            Text(
-                text = "$sessionTitle · $sessionMode",
-                fontSize = 13.sp,
-                lineHeight = 17.sp,
-                color = Color(color = 0xFF6B7280)
-            )
-        }
+            text = compactTitle,
+            fontSize = 18.sp,
+            lineHeight = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(color = 0xFF111827),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
         Text(
             modifier = Modifier
                 .clip(shape = RoundedCornerShape(size = 999.dp))
-                .background(color = Color(color = 0xFFEAF7EF))
+                .background(color = Color.White)
                 .clickable(onClick = onNewSession)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = 11.dp, vertical = 7.dp),
             text = "新会话",
             fontSize = 12.sp,
             lineHeight = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(color = 0xFF15803D)
+            color = Color(color = 0xFF2563EB)
         )
     }
 }
@@ -629,45 +637,76 @@ private fun PrimaryOnCallAction(
     body: String,
     onClick: () -> Unit
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(size = 16.dp))
-            .background(color = Color(color = 0xFF2563EB))
+            .clip(shape = RoundedCornerShape(size = 18.dp))
+            .background(color = Color.White)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(space = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 15.dp),
+        verticalArrangement = Arrangement.spacedBy(space = 12.dp),
+        horizontalAlignment = Alignment.Start
     ) {
-        Box(
-            modifier = Modifier
-                .size(size = 44.dp)
-                .clip(shape = RoundedCornerShape(size = 14.dp))
-                .background(color = Color.White.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(space = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Rounded.SmartToy,
-                contentDescription = null,
-                tint = Color.White
+            Box(
+                modifier = Modifier
+                    .size(size = 42.dp)
+                    .clip(shape = CircleShape)
+                    .background(color = Color(color = 0xFF2563EB)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.Send,
+                    contentDescription = null,
+                    tint = Color.White
+                )
+            }
+            Column(
+                modifier = Modifier.weight(weight = 1f),
+                verticalArrangement = Arrangement.spacedBy(space = 4.dp)
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(color = 0xFF111827)
+                )
+                Text(
+                    text = body,
+                    fontSize = 13.sp,
+                    lineHeight = 17.sp,
+                    color = Color(color = 0xFF6B7280)
+                )
+            }
+            Text(
+                modifier = Modifier
+                    .clip(shape = RoundedCornerShape(size = 999.dp))
+                    .background(color = Color(color = 0xFFEFF6FF))
+                    .padding(horizontal = 11.dp, vertical = 7.dp),
+                text = "开始",
+                fontSize = 13.sp,
+                lineHeight = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(color = 0xFF2563EB)
             )
         }
-        Column(
-            modifier = Modifier.weight(weight = 1f),
-            verticalArrangement = Arrangement.spacedBy(space = 4.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape = RoundedCornerShape(size = 12.dp))
+                .background(color = Color(color = 0xFFF3F6FA))
+                .padding(horizontal = 12.dp, vertical = 11.dp)
         ) {
             Text(
-                text = title,
-                fontSize = 18.sp,
-                lineHeight = 21.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            Text(
-                text = body,
-                fontSize = 13.sp,
-                lineHeight = 17.sp,
-                color = Color.White.copy(alpha = 0.82f)
+                text = "输入 Tab 配置、接口错误或接入问题",
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                color = Color(color = 0xFF9CA3AF)
             )
         }
     }
@@ -758,48 +797,51 @@ private fun SessionRow(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val title = session.title.ifBlank { "未命名咨询" }
+    val meta = listOfNotNull(
+        session.messageCount?.let { "${it} 条" },
+        formatSessionTime(value = session.updatedAt ?: session.createdAt)
+    ).joinToString(separator = " · ")
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(size = 12.dp))
-            .background(color = Color.White)
+            .clip(shape = RoundedCornerShape(size = 10.dp))
+            .background(color = Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 13.dp),
-        horizontalArrangement = Arrangement.spacedBy(space = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 4.dp, vertical = 9.dp),
+        horizontalArrangement = Arrangement.spacedBy(space = 11.dp),
+        verticalAlignment = Alignment.Top
     ) {
         Box(
             modifier = Modifier
-                .size(size = 36.dp)
-                .clip(shape = RoundedCornerShape(size = 12.dp))
+                .size(size = 32.dp)
+                .clip(shape = CircleShape)
                 .background(color = Color(color = 0xFFEFF6FF)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                modifier = Modifier.size(size = 20.dp),
-                imageVector = Icons.Rounded.SmartToy,
-                contentDescription = null,
-                tint = Color(color = 0xFF2563EB)
+            Text(
+                text = title.take(n = 1),
+                fontSize = 14.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(color = 0xFF2563EB)
             )
         }
         Column(
             modifier = Modifier.weight(weight = 1f),
-            verticalArrangement = Arrangement.spacedBy(space = 4.dp)
+            verticalArrangement = Arrangement.spacedBy(space = 5.dp)
         ) {
             Text(
-                text = session.title.ifBlank { "未命名咨询" },
-                fontSize = 15.sp,
-                lineHeight = 18.sp,
+                text = title,
+                fontSize = 16.sp,
+                lineHeight = 19.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(color = 0xFF111827)
             )
             Text(
-                text = listOfNotNull(
-                    session.messageCount?.let { "${it} 条消息" },
-                    formatSessionTime(value = session.updatedAt ?: session.createdAt)
-                ).joinToString(separator = " · "),
-                fontSize = 12.sp,
-                lineHeight = 15.sp,
+                text = meta.ifBlank { "暂无更新时间" },
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
                 color = Color(color = 0xFF6B7280)
             )
         }
@@ -853,26 +895,39 @@ private fun QuickQuestionRow(
         "TabManifest 必填字段有哪些？",
         "为什么会版本不兼容？"
     )
-    Row(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(state = rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(space = 8.dp)
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(space = 8.dp),
+        horizontalAlignment = Alignment.Start
     ) {
         questions.forEach { question ->
-            Text(
+            Row(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .clip(shape = RoundedCornerShape(size = 999.dp))
                     .background(color = Color.White)
                     .clickable(enabled = enabled) {
                         onClick(question)
                     }
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                text = question,
-                fontSize = 12.sp,
-                lineHeight = 14.sp,
-                color = if (enabled) Color(color = 0xFF2563EB) else Color(color = 0xFF9CA3AF)
-            )
+                horizontalArrangement = Arrangement.spacedBy(space = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    modifier = Modifier.size(size = 16.dp),
+                    imageVector = Icons.Rounded.Bolt,
+                    contentDescription = null,
+                    tint = if (enabled) Color(color = 0xFF2563EB) else Color(color = 0xFF9CA3AF)
+                )
+                Text(
+                    modifier = Modifier.weight(weight = 1f),
+                    text = question,
+                    fontSize = 13.sp,
+                    lineHeight = 17.sp,
+                    color = if (enabled) Color(color = 0xFF2563EB) else Color(color = 0xFF9CA3AF)
+                )
+            }
         }
     }
 }
@@ -1013,6 +1068,7 @@ private fun OnCallInputBar(
     value: String,
     sending: Boolean,
     onValueChange: (String) -> Unit,
+    onFocusInput: () -> Unit,
     onSend: () -> Unit
 ) {
     Row(
@@ -1025,7 +1081,13 @@ private fun OnCallInputBar(
         verticalAlignment = Alignment.Bottom
     ) {
         OutlinedTextField(
-            modifier = Modifier.weight(weight = 1f),
+            modifier = Modifier
+                .weight(weight = 1f)
+                .onFocusChanged { state ->
+                    if (state.isFocused) {
+                        onFocusInput()
+                    }
+                },
             value = value,
             onValueChange = onValueChange,
             minLines = 1,
@@ -1094,7 +1156,11 @@ private fun handleStreamEvent(
 
         is OnCallStreamEvent.Done -> {
             val old = messages[assistantIndex] as OnCallMessageUi.Assistant
-            messages[assistantIndex] = old.copy(streaming = false)
+            messages[assistantIndex] = old.copy(
+                content = old.content.collapseDuplicatedReply(),
+                streaming = false
+            )
+            removeAdjacentDuplicatedAssistant(messages = messages, assistantId = assistantId)
             onDone()
         }
 
@@ -1111,6 +1177,53 @@ private fun handleStreamEvent(
             // 未知事件暂不打断主流程。服务端扩展新事件后可在这里补充新的展示卡片。
         }
     }
+}
+
+private fun removeAdjacentDuplicatedAssistant(
+    messages: MutableList<OnCallMessageUi>,
+    assistantId: String
+) {
+    val assistantIndex = messages.indexOfFirst { item -> item.id == assistantId }
+    if (assistantIndex <= 0) {
+        return
+    }
+    val current = messages[assistantIndex] as? OnCallMessageUi.Assistant ?: return
+    val previousAssistantIndex = messages
+        .take(n = assistantIndex)
+        .indexOfLast { item -> item is OnCallMessageUi.Assistant }
+    if (previousAssistantIndex == -1) {
+        return
+    }
+    val hasUserBetween = messages
+        .subList(fromIndex = previousAssistantIndex + 1, toIndex = assistantIndex)
+        .any { item -> item is OnCallMessageUi.User }
+    if (hasUserBetween) {
+        return
+    }
+    val previous = messages[previousAssistantIndex] as? OnCallMessageUi.Assistant ?: return
+    if (
+        !previous.streaming &&
+        previous.failedMessage == null &&
+        current.failedMessage == null &&
+        previous.content.normalizedReplyText() == current.content.normalizedReplyText()
+    ) {
+        messages.removeAt(index = assistantIndex)
+    }
+}
+
+private fun String.collapseDuplicatedReply(): String {
+    val value = trim()
+    if (value.length < 16 || value.length % 2 != 0) {
+        return this
+    }
+    val half = value.length / 2
+    val first = value.substring(startIndex = 0, endIndex = half).trim()
+    val second = value.substring(startIndex = half).trim()
+    return if (first == second) first else this
+}
+
+private fun String.normalizedReplyText(): String {
+    return trim().replace(regex = "\\s+".toRegex(), replacement = " ")
 }
 
 @Composable
@@ -1476,6 +1589,16 @@ private fun formatSessionTime(value: String?): String {
     }.getOrElse {
         value.replace(oldValue = "T", newValue = " ").substringBefore(delimiter = "+")
     }
+}
+
+private fun String.toCompactSessionTitle(): String {
+    val cleanTitle = trim()
+        .ifBlank { "新咨询" }
+        .replace(oldValue = "Tab 接入咨询", newValue = "Tab接入")
+        .replace(oldValue = "快速咨询", newValue = "快速问答")
+        .replace(oldValue = "临时会话", newValue = "新咨询")
+        .replace(oldValue = "未命名咨询", newValue = "新咨询")
+    return cleanTitle.take(n = 5)
 }
 
 private fun String.isVisibleToolStatus(): Boolean {

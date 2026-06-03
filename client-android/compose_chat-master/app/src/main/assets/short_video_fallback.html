@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>短视频演示</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #050509;
+      color: #ffffff;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background: #050509;
+    }
+    .feed {
+      height: 100vh;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+      overscroll-behavior-y: contain;
+    }
+    .clip {
+      position: relative;
+      height: 100vh;
+      min-height: 100vh;
+      scroll-snap-align: start;
+      display: grid;
+      align-items: end;
+      padding: 24px 18px 34px;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 22% 16%, rgba(255, 255, 255, 0.22), transparent 28%),
+        linear-gradient(150deg, var(--from), var(--mid) 45%, var(--to));
+    }
+    .clip::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.68)),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 8px);
+      opacity: 0.9;
+    }
+    .motion {
+      position: absolute;
+      inset: 15% 11% 20%;
+      border-radius: 18px;
+      background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.18), transparent 38%),
+        repeating-radial-gradient(circle at center, rgba(255, 255, 255, 0.15) 0 6px, transparent 7px 24px);
+      filter: saturate(1.2);
+      transform: rotate(-6deg);
+      animation: float 4.5s ease-in-out infinite alternate;
+    }
+    .clip:nth-child(2) .motion {
+      transform: rotate(5deg);
+      animation-duration: 5.2s;
+    }
+    .clip:nth-child(3) .motion {
+      transform: rotate(-2deg);
+      animation-duration: 3.8s;
+    }
+    @keyframes float {
+      from { translate: -10px -8px; scale: 0.98; }
+      to { translate: 12px 10px; scale: 1.04; }
+    }
+    .content {
+      display: grid;
+      gap: 16px;
+      z-index: 1;
+    }
+    .meta {
+      display: grid;
+      gap: 8px;
+      max-width: 78%;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.34);
+    }
+    .author {
+      font-weight: 800;
+      font-size: 19px;
+    }
+    .desc {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.42;
+      color: rgba(255, 255, 255, 0.88);
+    }
+    .actions {
+      position: absolute;
+      right: 14px;
+      bottom: 95px;
+      display: grid;
+      gap: 12px;
+      z-index: 2;
+    }
+    button {
+      width: 54px;
+      height: 54px;
+      border: 0;
+      border-radius: 50%;
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(10px);
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.28);
+    }
+    .play {
+      width: 68px;
+      height: 68px;
+      place-self: center;
+      align-self: center;
+      display: grid;
+      place-items: center;
+      font-size: 26px;
+      background: rgba(0, 0, 0, 0.38);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+    .playing .play {
+      opacity: 0;
+      transform: scale(0.9);
+      pointer-events: none;
+    }
+    .ticker {
+      width: min(100%, 360px);
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.14);
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 12px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker span {
+      display: inline-block;
+      padding-left: 100%;
+      animation: marquee 12s linear infinite;
+    }
+    @keyframes marquee {
+      to { transform: translateX(-100%); }
+    }
+    .hint {
+      position: fixed;
+      left: 50%;
+      top: max(12px, env(safe-area-inset-top));
+      z-index: 3;
+      transform: translateX(-50%);
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.38);
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 12px;
+      backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body>
+  <div class="hint">本地兜底演示页 · 可上下滑动</div>
+  <main class="feed" id="feed">
+    <section class="clip playing" style="--from:#111827;--mid:#ef4444;--to:#f59e0b">
+      <div class="motion"></div>
+      <button class="play" type="button">▶</button>
+      <div class="actions">
+        <button type="button" data-action="like">赞</button>
+        <button type="button" data-action="mute">静音</button>
+      </div>
+      <div class="content">
+        <div class="meta">
+          <div class="author">@AI-OnCall Demo</div>
+          <p class="desc">Web 页面容器兜底内容：外部平台受限时，仍可演示短视频浏览体验。</p>
+        </div>
+        <div class="ticker"><span>容器能力：URL 白名单 · WebView 播放设置 · 本地兜底页面</span></div>
+      </div>
+    </section>
+    <section class="clip" style="--from:#0f172a;--mid:#2563eb;--to:#14b8a6">
+      <div class="motion"></div>
+      <button class="play" type="button">▶</button>
+      <div class="actions">
+        <button type="button" data-action="like">赞</button>
+        <button type="button" data-action="mute">静音</button>
+      </div>
+      <div class="content">
+        <div class="meta">
+          <div class="author">@企业业务</div>
+          <p class="desc">企业开发者只需要提供业务 URL，容器负责加载、返回、刷新和异常展示。</p>
+        </div>
+        <div class="ticker"><span>示例分类：休闲服务 · 容器类型：Web 页面容器</span></div>
+      </div>
+    </section>
+    <section class="clip" style="--from:#18181b;--mid:#7c3aed;--to:#db2777">
+      <div class="motion"></div>
+      <button class="play" type="button">▶</button>
+      <div class="actions">
+        <button type="button" data-action="like">赞</button>
+        <button type="button" data-action="mute">静音</button>
+      </div>
+      <div class="content">
+        <div class="meta">
+          <div class="author">@接入协议</div>
+          <p class="desc">Manifest 中的 category 会决定业务入口出现在工作台哪个分类下。</p>
+        </div>
+        <div class="ticker"><span>下一步可接 JS Bridge：获取用户信息、调用容器原生能力</span></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const feed = document.getElementById('feed');
+    const clips = Array.from(document.querySelectorAll('.clip'));
+
+    function playOnly(target) {
+      clips.forEach((clip) => clip.classList.toggle('playing', clip === target));
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      const current = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (current) {
+        playOnly(current.target);
+      }
+    }, { root: feed, threshold: [0.65] });
+
+    clips.forEach((clip) => {
+      observer.observe(clip);
+      clip.querySelector('.play').addEventListener('click', () => playOnly(clip));
+      clip.addEventListener('click', (event) => {
+        if (event.target.tagName !== 'BUTTON') {
+          clip.classList.toggle('playing');
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="like"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        button.textContent = button.textContent === '赞' ? '已赞' : '赞';
+      });
+    });
+
+    document.querySelectorAll('[data-action="mute"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        button.textContent = button.textContent === '静音' ? '有声' : '静音';
+      });
+    });
+  </script>
+</body>
+</html>

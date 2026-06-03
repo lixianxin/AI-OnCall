@@ -23,3 +23,4 @@ rootProject.name = "compose_chat"
 include(":app")
 include(":base")
 include(":proxy")
+include(":protocol")
