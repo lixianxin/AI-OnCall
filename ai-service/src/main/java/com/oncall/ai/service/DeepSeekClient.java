@@ -3,6 +3,7 @@ package com.oncall.ai.service;
 import com.oncall.ai.model.Conversation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oncall.ai.model.Message;
+import com.oncall.ai.model.Role;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +44,8 @@ public class DeepSeekClient {
                 .build();
     }
 
-    public Flux<String> stream(String systemPrompt, Conversation conversation, String userMessage, List<DocumentChunk> chunks) {
-        String prompt = buildPrompt(systemPrompt, conversation, userMessage, chunks);
+    public Flux<String> stream(String systemPrompt, Conversation conversation, String userMessage, String detailData) {
+        String prompt = buildPrompt(systemPrompt, conversation, userMessage, detailData);
         String requestBody = String.format("""
                 {"model":"%s","stream":true,"messages":%s}
                 """, modelName, prompt).stripIndent().strip();
@@ -59,6 +60,7 @@ public class DeepSeekClient {
                         .header("Authorization", "Bearer " + apiKey)
                         .header("Content-Type", "application/json")
                         .header("Accept", "text/event-stream")
+                        .timeout(java.time.Duration.ofSeconds(60))
                         .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                         .build();
 
@@ -126,39 +128,29 @@ public class DeepSeekClient {
         }
     }
 
-    private String buildPrompt(String systemPrompt, Conversation conversation, String userMessage, List<DocumentChunk> chunks) {
+    private String buildPrompt(String systemPrompt, Conversation conversation, String userMessage, String detailData) {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
 
+        // Use systemPrompt as-is (already contains knowledge base content + metrics)
+        String fullSystemPrompt = systemPrompt;
         sb.append(String.format("""
                 {"role":"system","content":"%s"}
-                """, escapeJson(systemPrompt)).stripIndent());
+                """, escapeJson(fullSystemPrompt)).stripIndent());
 
-        if (!chunks.isEmpty()) {
-            String docsContext = chunks.stream()
-                    .map(c -> "[" + c.getSource() + "] " + c.getContent())
-                    .collect(Collectors.joining("\n\n---\n\n"));
+        // Conversation history
+        for (Message msg : conversation.getRecentMessages(10)) {
+            String role = msg.role() == Role.USER ? "user" : "assistant";
+            sb.append(",");
             sb.append(String.format("""
-                ,{"role":"system","content":"Following are relevant documents. Answer strictly based on them:\\n%s"}
-                """, escapeJson(docsContext)).stripIndent());
-        }
-
-        if (conversation != null) {
-            List<Message> history = conversation.lastMessages(10);
-            for (Message msg : history) {
-                String role = switch (msg.role()) {
-                    case USER -> "user";
-                    case ASSISTANT -> "assistant";
-                    default -> "system";
-                };
-                sb.append(String.format("""
-                    ,{"role":"%s","content":"%s"}
+                    {"role":"%s","content":"%s"}
                     """, role, escapeJson(msg.content())).stripIndent());
-            }
         }
 
+        // Current user message
+        sb.append(",");
         sb.append(String.format("""
-                ,{"role":"user","content":"%s"}
+                {"role":"user","content":"%s"}
                 """, escapeJson(userMessage)).stripIndent());
 
         sb.append("]");

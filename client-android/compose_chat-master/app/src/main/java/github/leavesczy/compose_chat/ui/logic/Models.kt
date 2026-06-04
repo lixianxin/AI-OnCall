@@ -31,6 +31,11 @@ data class MainPageBottomBarViewState(
     val selectedTab: MainPageTab,
     val selectedOpenTabId: String?,
     val openTabs: List<OpenTabItem>,
+    val onCallRouteKey: Long = 0L,
+    val onCallSessionId: String? = null,
+    val onCallSessionTitle: String? = null,
+    val onCallInitialPrompt: String? = null,
+    val onCallForceNewSession: Boolean = false,
     val unreadMessageCount: Long,
     val onClickTab: (tab: MainPageTab) -> Unit,
     val onClickOpenTab: (tab: OpenTabItem) -> Unit

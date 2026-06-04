@@ -5,7 +5,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -23,7 +27,10 @@ public class ConversationStore {
 
     /** 获取或创建会话 */
     public Conversation getOrCreate(String conversationId) {
-        return store.computeIfAbsent(conversationId, Conversation::new);
+        String id = (conversationId == null || conversationId.isBlank()) 
+                ? UUID.randomUUID().toString() 
+                : conversationId;
+        return store.computeIfAbsent(id, Conversation::new);
     }
 
     /** 查找已有会话 */
@@ -42,6 +49,22 @@ public class ConversationStore {
     public void remove(String conversationId) {
         store.remove(conversationId);
         log.debug("Conversation removed: id={}", conversationId);
+    }
+
+    // Deduplication: track processed messageIds per conversation
+    private final ConcurrentHashMap<String, Set<String>> processedMessages = new ConcurrentHashMap<>();
+
+    /** Check if this message was already processed for this conversation */
+    public boolean isDuplicate(String conversationId, String messageId) {
+        if (messageId == null || messageId.isBlank()) return false;
+        Set<String> ids = processedMessages.get(conversationId);
+        return ids != null && ids.contains(messageId);
+    }
+
+    /** Mark a message as processed for deduplication */
+    public void markProcessed(String conversationId, String messageId) {
+        if (messageId == null || messageId.isBlank()) return;
+        processedMessages.computeIfAbsent(conversationId, k -> ConcurrentHashMap.newKeySet()).add(messageId);
     }
 
     /** 当前活跃会话数 */

@@ -5,6 +5,7 @@ package com.oncall.ai.model;
  */
 public record ChatRequest(
         String message,
-        String conversationId
+        String conversationId,
+        String messageId
 ) {
 }
