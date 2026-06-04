@@ -511,8 +511,6 @@ private fun CompanyIntroPage(
     var announcementTitle by remember { mutableStateOf("") }
     var announcementContent by remember { mutableStateOf("") }
     var announcementPinned by remember { mutableStateOf(false) }
-    var refreshKey by remember { mutableStateOf(0) }
-    var loadState by remember { mutableStateOf(BusinessLoadState()) }
 
     fun selectParticipantsScope(teamId: String = targetTeamId.ifBlank { defaultTeamId() }) {
         eventVisibility = OpenCalendarVisibility.Participants
@@ -1692,6 +1690,22 @@ private fun AnnouncementDetailCard(
         }
     }
 }
+
+
+@Composable
+private fun CalendarPlaceholderPage(
+    modifier: Modifier,
+    tab: OpenTabItem,
+    onBackToWorkbench: (() -> Unit)?
+) {
+    OpenTabScaffold(modifier = modifier, tab = tab, onBackToWorkbench = onBackToWorkbench) {
+        SectionCard(
+            title = "日程管理",
+            body = "日程管理功能仍在接入中，后续会展示团队日程、会议安排和提醒功能。"
+        )
+    }
+}
+
 
 @Composable
 private fun FinancePlaceholderPage(
@@ -4956,8 +4970,8 @@ private fun ParticipantSelector(
                 lineHeight = 15.sp,
                 color = AppTheme.colorScheme.c_FF384F60_99FFFFFF.color
             )
-        }
-        members.chunked(size = 2).forEach { rowMembers ->
+        } else {
+            members.chunked(size = 2).forEach { rowMembers ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(space = 8.dp),
@@ -4971,8 +4985,7 @@ private fun ParticipantSelector(
                     )
                 }
             }
-        } else if (centerTitle) {
-            Box(modifier = Modifier.size(size = 36.dp))
+            }
         }
     }
 }

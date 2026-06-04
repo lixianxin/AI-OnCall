@@ -356,7 +356,8 @@ v1.x 标记 @Deprecated → v2.0 正式移除
 协议定义的 Kotlin 类型（TabDefinition、TabLifecycle、TabExtension 等）实现文件位于：
 
 ```
-client/app/src/main/java/github/leavesczy/compose_chat/protocol/
+client-android/compose_chat-master/app/src/main/java/github/leavesczy/compose_chat/open/
 ```
 
 具体代码文件列表见该目录。
+

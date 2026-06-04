@@ -118,7 +118,8 @@ data class OpenApprovalItem(
     val reason: String,
     val comment: String?,
     val createdAt: String,
-    val updatedAt: String?
+    val updatedAt: String?,
+    val amount: Int? = null,
 )
 
 data class OpenCalendarParticipant(

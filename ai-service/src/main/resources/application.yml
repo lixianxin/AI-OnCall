@@ -17,3 +17,8 @@ deepseek:
 
 oncall:
   docs-path: ${ONCALL_DOCS_PATH:../docs}
+  # 远端知识库地址。配置后启动时自动下载到 docs-path 目录，覆盖本地文件。
+  # 支持两种模式：
+  #   1. 单个 .md 文件 URL：直接下载该文件
+  #   2. Manifest URL：返回文本，每行一个 .md 文件 URL（如 GitLab Raw 目录索引）
+  docs-remote-url: ${ONCALL_DOCS_REMOTE_URL:}

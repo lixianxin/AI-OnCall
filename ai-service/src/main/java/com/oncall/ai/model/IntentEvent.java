@@ -10,7 +10,7 @@ public record IntentEvent(String intent) implements ChatEvent {
         return "intent";
     }
 
-    /** 预定义的意图类型常量 */
+    /** 棰勫畾涔夌殑鎰忓浘绫诲瀷甯搁噺 */
     public static final String PROTOCOL_QA = "PROTOCOL_QA";
     public static final String ERROR_DIAGNOSIS = "ERROR_DIAGNOSIS";
     public static final String CODE_GENERATION = "CODE_GENERATION";

@@ -2,6 +2,7 @@ package github.leavesczy.compose_chat.open.network
 
 import github.leavesczy.compose_chat.open.config.OnCallConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -80,29 +81,53 @@ class OnCallApiClient(
 
     private fun executeSse(request: Request): Flow<OnCallSseLine> {
         return flow {
-            try {
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        emit(
-                            OnCallSseLine.Error(
+            var retryCount = 0
+            val maxRetries = 3
+            var lastError: OnCallSseLine.Error? = null
+
+            while (retryCount <= maxRetries) {
+                try {
+                    client.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) {
+                            lastError = OnCallSseLine.Error(
                                 code = "HTTP_${response.code}",
-                                message = "AI Service 返回错误：${response.message}"
+                                message = "AI Service error: ${response.message}"
                             )
-                        )
-                        return@use
+                            if (retryCount < maxRetries) {
+                                retryCount++
+                                val delayMs = (1000L * Math.pow(2.0, (retryCount - 1).toDouble())).toLong()
+                                kotlinx.coroutines.delay(delayMs)
+                                continue
+                            } else {
+                                emit(lastError!!)
+                                return@flow
+                            }
+                        }
+                        val source = response.body.source()
+                        while (!source.exhausted()) {
+                            emit(OnCallSseLine.Text(line = source.readUtf8Line().orEmpty()))
+                        }
+                        // Normal completion, no retry needed
+                        return@flow
                     }
-                    val source = response.body.source()
-                    while (!source.exhausted()) {
-                        emit(OnCallSseLine.Text(line = source.readUtf8Line().orEmpty()))
+                } catch (error: IOException) {
+                    retryCount++
+                    lastError = OnCallSseLine.Error(
+                        code = "NETWORK_ERROR",
+                        message = error.message ?: "Network error"
+                    )
+                    if (retryCount <= maxRetries) {
+                        val delayMs = (1000L * Math.pow(2.0, (retryCount - 1).toDouble())).toLong()
+                        emit(OnCallSseLine.Error(
+                            code = "RETRY_${retryCount}",
+                            message = "Reconnecting in ${delayMs}ms..."
+                        ))
+                        kotlinx.coroutines.delay(delayMs)
+                    } else {
+                        emit(lastError!!)
+                        return@flow
                     }
                 }
-            } catch (error: IOException) {
-                emit(
-                    OnCallSseLine.Error(
-                        code = "NETWORK_ERROR",
-                        message = error.message ?: "AI Service 网络异常"
-                    )
-                )
             }
         }.flowOn(context = Dispatchers.IO)
     }

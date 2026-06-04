@@ -22,7 +22,8 @@ public class DocumentStore {
     private static final int CHUNK_SIZE = 800;
     private static final int CHUNK_OVERLAP = 100;
     private static final double BM25_K1 = 1.5;
-    private static final double BM25_B = 0.75;
+        private static final double BM25_B = 0.75;
+    private static final double MIN_SCORE = 0.5;
 
     private final String docsPath;
     private final List<DocumentChunk> chunks = new ArrayList<>();
@@ -58,22 +59,57 @@ public class DocumentStore {
         try {
             String content = Files.readString(file);
             String fileName = file.getFileName().toString();
-            int start = 0;
             int idx = 0;
-            while (start < content.length()) {
-                int end = Math.min(start + CHUNK_SIZE, content.length());
-                String chunkText = content.substring(start, end).trim();
-                if (!chunkText.isEmpty()) {
-                    chunks.add(new DocumentChunk(
-                            fileName + "#" + (idx++),
-                            chunkText,
-                            fileName,
-                            idx - 1
-                    ));
+            
+            // Split by Markdown headings (## or ### lines)
+            String[] lines = content.split("\n");
+            StringBuilder currentSection = new StringBuilder();
+            String currentHeading = "";
+            
+            for (String line : lines) {
+                String trimmed = line.trim();
+                // Check if this line is a Markdown heading
+                boolean isHeading = trimmed.startsWith("#") && !trimmed.startsWith("# ");
+                if (trimmed.startsWith("##")) {
+                    // Save previous section if non-empty
+                    String sectionText = currentSection.toString().trim();
+                    if (!sectionText.isEmpty()) {
+                        String chunkId = fileName + "#" + (idx++);
+                        String sectionName = currentHeading.isEmpty() ? fileName : currentHeading;
+                        chunks.add(new DocumentChunk(chunkId, sectionText, fileName + " > " + sectionName, idx - 1));
+                    }
+                    // Start new section
+                    currentHeading = trimmed.replaceAll("^#+\\s*", "").trim();
+                    currentSection = new StringBuilder();
+                    currentSection.append(line).append("\n");
+                } else if (trimmed.startsWith("###")) {
+                    // Sub-headings: include as part of current section with clear marker
+                    currentSection.append("\n--- ").append(trimmed.replaceAll("^#+\\s*", "").trim()).append(" ---\n");
+                } else {
+                    currentSection.append(line).append("\n");
+                    // If section grows too large, split by paragraph
+                    if (currentSection.length() > 800 && trimmed.isEmpty()) {
+                        String sectionText = currentSection.toString().trim();
+                        if (!sectionText.isEmpty()) {
+                            String chunkId = fileName + "#" + (idx++);
+                            String sectionName = currentHeading.isEmpty() ? fileName : currentHeading;
+                            chunks.add(new DocumentChunk(chunkId, sectionText, fileName + " > " + sectionName, idx - 1));
+                        }
+                        currentSection = new StringBuilder();
+                        currentSection.append(line).append("\n");
+                    }
                 }
-                start += CHUNK_SIZE - CHUNK_OVERLAP;
             }
-            log.debug("Loaded {} chunks from {}", idx, fileName);
+            
+            // Don't forget the last section
+            String sectionText = currentSection.toString().trim();
+            if (!sectionText.isEmpty()) {
+                String chunkId = fileName + "#" + (idx++);
+                String sectionName = currentHeading.isEmpty() ? fileName : currentHeading;
+                chunks.add(new DocumentChunk(chunkId, sectionText, fileName + " > " + sectionName, idx - 1));
+            }
+            
+            log.debug("Loaded {} chunks from {} (heading-based)", idx, fileName);
         } catch (IOException e) {
             log.error("Failed to read file: {}", file, e);
         }
@@ -101,7 +137,7 @@ public class DocumentStore {
                 .map(chunk -> new AbstractMap.SimpleEntry<>(chunk, bm25Score(queryTerms, chunk)))
                 .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                 .limit(topK)
-                .filter(e -> e.getValue() > 0)
+                .filter(e -> e.getValue() >= MIN_SCORE)
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
@@ -130,16 +166,16 @@ public class DocumentStore {
         Set<String> tokens = new HashSet<>();
         String lower = text.toLowerCase();
 
-        // Collect consecutive Chinese chars into runs, then emit bigrams
+        // Chinese: emit unigrams + bigrams for better coverage
         StringBuilder run = new StringBuilder();
         for (char c : lower.toCharArray()) {
             if (c >= 0x4e00 && c <= 0x9fff) {
                 run.append(c);
             } else {
-                emitBigrams(tokens, run);
+                emitChineseTokens(tokens, run);
             }
         }
-        emitBigrams(tokens, run);
+        emitChineseTokens(tokens, run);
 
         // English: split by whitespace, keep words >= 2 chars
         String asciiPart = text.replaceAll("[^a-zA-Z0-9\\s]", " ");
@@ -152,10 +188,16 @@ public class DocumentStore {
         return tokens;
     }
 
-    private void emitBigrams(Set<String> tokens, StringBuilder run) {
+    private void emitChineseTokens(Set<String> tokens, StringBuilder run) {
+        if (run.length() == 0) return;
         if (run.length() == 1) {
             tokens.add(run.toString());
-        } else if (run.length() >= 2) {
+        } else {
+            // unigrams
+            for (int i = 0; i < run.length(); i++) {
+                tokens.add(run.substring(i, i + 1));
+            }
+            // bigrams
             for (int i = 0; i <= run.length() - 2; i++) {
                 tokens.add(run.substring(i, i + 2));
             }
@@ -164,4 +206,45 @@ public class DocumentStore {
     }
 
     public int getChunkCount() { return chunks.size(); }
+
+    public List<DocumentChunk> getChunks() { return new java.util.ArrayList<>(chunks); }
+
+    public List<SearchResult> searchWithScores(String query, int topK) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        String[] queryTerms = tokenize(query).toArray(String[]::new);
+        if (queryTerms.length == 0) {
+            return List.of();
+        }
+        return chunks.stream()
+                .map(chunk -> new AbstractMap.SimpleEntry<>(chunk, bm25Score(queryTerms, chunk)))
+                .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                .limit(topK)
+                .filter(e -> e.getValue() >= MIN_SCORE)
+                .map(e -> new SearchResult(e.getKey(), e.getValue()))
+                .collect(Collectors.toList());
+    }
+
+    public String searchAsString(String query) {
+        if (query == null || query.isBlank()) {
+            return "";
+        }
+        List<SearchResult> results = searchWithScores(query, 10);
+        if (results == null || results.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        int count = 0;
+        for (SearchResult sr : results) {
+            if (sr.getScore() < MIN_SCORE) continue;
+            if (count > 0) sb.append("\n---\n");
+            DocumentChunk chunk = sr.getChunk();
+            sb.append("[").append(chunk.getSource()).append("] ");
+            sb.append(chunk.getContent());
+            count++;
+        }
+        return sb.toString();
+    }
+
 }

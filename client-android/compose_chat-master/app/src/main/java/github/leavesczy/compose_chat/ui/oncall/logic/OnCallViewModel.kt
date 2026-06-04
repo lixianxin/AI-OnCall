@@ -13,44 +13,45 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 /**
- * AI OnCall 聊天页面 ViewModel
+ * AI OnCall 鑱婂ぉ椤甸潰 ViewModel
  *
- * 职责：
- * - 管理聊天会话的完整生命周期
- * - 暴露 [uiState] StateFlow 供页面订阅
- * - 封装消息发送、流式接收、停止、重试等全部业务逻辑
+ * 鑱岃矗锛?
+ * - 绠＄悊鑱婂ぉ浼氳瘽鐨勫畬鏁寸敓鍛藉懆鏈?
+ * - 鏆撮湶 [uiState] StateFlow 渚涢〉闈㈣闃?
+ * - 灏佽娑堟伅鍙戦€併€佹祦寮忔帴鏀躲€佸仠姝€侀噸璇曠瓑鍏ㄩ儴涓氬姟閫昏緫
  *
- * 页面只需：
- * 1. collectAsState(uiState) 获取状态
- * 2. 调用 onInputChange / sendMessage / stop / retry 转发用户操作
+ * 椤甸潰鍙渶锛?
+ * 1. collectAsState(uiState) 鑾峰彇鐘舵€?
+ * 2. 璋冪敤 onInputChange / sendMessage / stop / retry 杞彂鐢ㄦ埛鎿嶄綔
  */
 class OnCallViewModel : BaseViewModel() {
 
     private val repository = OpenOnCallRepository()
+    private val conversationId = "android-" + System.currentTimeMillis()
 
     private val _uiState = MutableStateFlow(OnCallUiState())
     val uiState: StateFlow<OnCallUiState> = _uiState.asStateFlow()
 
     private var streamJob: Job? = null
 
-    // ==================== 用户操作 ====================
+    // ==================== 鐢ㄦ埛鎿嶄綔 ====================
 
-    /** 输入框文本变化 */
+    /** 杈撳叆妗嗘枃鏈彉鍖?*/
     fun onInputChange(text: String) {
         _uiState.update { it.copy(input = text) }
     }
 
-    /** 发送输入框中的消息 */
+    /** 鍙戦€佽緭鍏ユ涓殑娑堟伅 */
     fun sendMessage() {
         doSend(content = _uiState.value.input.trim())
     }
 
-    /** 发送快捷问题（零秒发送，无需经过输入框） */
+    /** 鍙戦€佸揩鎹烽棶棰橈紙闆剁鍙戦€侊紝鏃犻渶缁忚繃杈撳叆妗嗭級 */
     fun sendQuickMessage(text: String) {
         doSend(content = text.trim())
     }
 
-    /** 停止当前生成 */
+    /** 鍋滄褰撳墠鐢熸垚 */
     fun stopStreaming() {
         streamJob?.cancel()
         streamJob = null
@@ -71,7 +72,7 @@ class OnCallViewModel : BaseViewModel() {
         }
     }
 
-    /** 重试上一条失败消息 */
+    /** 閲嶈瘯涓婁竴鏉″け璐ユ秷鎭?*/
     fun retryLastMessage() {
         val state = _uiState.value
         val lastUserMessage = state.messages.findLast { it is OnCallMessageUi.User } as? OnCallMessageUi.User
@@ -79,14 +80,14 @@ class OnCallViewModel : BaseViewModel() {
         doSend(content = lastUserMessage.content)
     }
 
-    /** 清空对话 */
+    /** 娓呯┖瀵硅瘽 */
     fun clearConversation() {
         streamJob?.cancel()
         streamJob = null
         _uiState.update { OnCallUiState() }
     }
 
-    // ==================== 内部实现 ====================
+    // ==================== 鍐呴儴瀹炵幇 ====================
 
     private fun doSend(content: String) {
         if (content.isBlank() || _uiState.value.isSending) return
@@ -113,14 +114,15 @@ class OnCallViewModel : BaseViewModel() {
         }
 
         streamJob = viewModelScope.launch {
-            repository.stream(message = content).collect { event ->
+            repository.stream(sessionId = conversationId, messageId = UUID.randomUUID().toString(), message = content).collect { event ->
                 when (event) {
                     is OnCallStreamEvent.Delta -> onDelta(assistantId, event.text)
                     is OnCallStreamEvent.Intent -> onIntent(event.intent)
                     is OnCallStreamEvent.Tool -> onTool(event)
                     is OnCallStreamEvent.Done -> onDone(assistantId)
                     is OnCallStreamEvent.Error -> onError(assistantId, event.message)
-                    is OnCallStreamEvent.Unknown -> { /* 未知事件不打断主流程 */ }
+                    is OnCallStreamEvent.Unknown -> { /* 鏈煡浜嬩欢涓嶆墦鏂富娴佺▼ */ }
+                    is OnCallStreamEvent.Sources -> { /* sources not shown in this view */ }
                 }
             }
         }
@@ -143,20 +145,20 @@ class OnCallViewModel : BaseViewModel() {
         _uiState.update { it.copy(currentIntent = displayIntent) }
     }
 
-    // ==================== Intent 映射 ====================
+    // ==================== Intent 鏄犲皠 ====================
 
     companion object {
 
         /**
-         * 将 AI Service 返回的原始 Intent 枚举映射为用户可见的中文标签。
-         * 未知值统一降级为"AI 助手"。
+         * 灏?AI Service 杩斿洖鐨勫師濮?Intent 鏋氫妇鏄犲皠涓虹敤鎴峰彲瑙佺殑涓枃鏍囩銆?
+         * 鏈煡鍊肩粺涓€闄嶇骇涓?AI 鍔╂墜"銆?
          */
         fun String.toDisplayIntent(): String = when (this) {
-            "PROTOCOL_QA" -> "协议问答"
-            "ERROR_DIAGNOSIS" -> "错误诊断"
-            "CODE_GENERATION" -> "代码生成"
-            "GENERAL_CHAT" -> "通用助手"
-            else -> "AI 助手"
+            "PROTOCOL_QA" -> "鍗忚闂瓟"
+            "ERROR_DIAGNOSIS" -> "閿欒璇婃柇"
+            "CODE_GENERATION" -> "浠ｇ爜鐢熸垚"
+            "GENERAL_CHAT" -> "閫氱敤鍔╂墜"
+            else -> "AI 鍔╂墜"
         }
     }
 
@@ -203,7 +205,7 @@ class OnCallViewModel : BaseViewModel() {
         }
     }
 
-    // ==================== 生命周期 ====================
+    // ==================== 鐢熷懡鍛ㄦ湡 ====================
 
     override fun onCleared() {
         super.onCleared()

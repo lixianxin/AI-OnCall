@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * 后续 DeepSeek Agent 输出不再需要修改协议层。
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", visible = true)
-@JsonSubTypes({
+@JsonSubTypes({@JsonSubTypes.Type(value = SourcesEvent.class, name = "sources"),
     @JsonSubTypes.Type(value = IntentEvent.class, name = "intent"),
     @JsonSubTypes.Type(value = ToolEvent.class, name = "tool"),
     @JsonSubTypes.Type(value = ContentEvent.class, name = "content"),
@@ -18,7 +18,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(value = ErrorEvent.class, name = "error")
 })
 public sealed interface ChatEvent
-        permits IntentEvent, ToolEvent, ContentEvent, DoneEvent, ErrorEvent {
+        permits IntentEvent, ToolEvent, ContentEvent, DoneEvent, ErrorEvent, SourcesEvent {
 
     String type();
 }
