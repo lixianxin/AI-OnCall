@@ -2,23 +2,7 @@
 
 OpenTab 服务端使用 Go + Gin 实现，负责账号登录、Bearer Token 鉴权、Tab 动态下发、团队与权限管理、审批/日程/公告业务接口、AI OnCall 会话管理和 SSE 流式转接。
 
-当前云服务器公网 IP：
-
-```text
-121.40.241.161
-```
-
-默认服务地址：
-
-```text
-http://121.40.241.161:8080
-```
-
-AI 服务地址：
-
-```text
-http://121.40.241.161:8081
-```
+部署地址按实际环境配置，仓库中不写入公网 IP。
 
 ## 技术栈
 
@@ -73,7 +57,7 @@ http://10.0.2.2:8080
 APP_MODE=postgres \
 DATABASE_URL="postgres://opentab:opentab123@localhost:5432/opentab?sslmode=disable" \
 REDIS_URL="redis://localhost:6379/0" \
-AI_SERVICE_BASE_URL="http://121.40.241.161:8081" \
+AI_SERVICE_BASE_URL="http://<ai-service-host>:8081" \
 HOST=0.0.0.0 \
 PORT=8080 \
 go run ./cmd/server
@@ -85,7 +69,7 @@ Windows PowerShell 示例：
 $env:APP_MODE="postgres"
 $env:DATABASE_URL="postgres://opentab:opentab123@localhost:5432/opentab?sslmode=disable"
 $env:REDIS_URL="redis://localhost:6379/0"
-$env:AI_SERVICE_BASE_URL="http://121.40.241.161:8081"
+$env:AI_SERVICE_BASE_URL="http://<ai-service-host>:8081"
 $env:HOST="0.0.0.0"
 $env:PORT="8080"
 go run ./cmd/server
@@ -98,7 +82,7 @@ go run ./cmd/server
 | `APP_MODE` | 运行模式，`mock` 或 `postgres` | `mock` |
 | `DATABASE_URL` | PostgreSQL 连接串 | 空 |
 | `REDIS_URL` | Redis 连接串 | 空 |
-| `AI_SERVICE_BASE_URL` | AI OnCall 服务地址 | `http://121.40.241.161:8081` |
+| `AI_SERVICE_BASE_URL` | AI OnCall 服务地址 | 空 |
 | `HOST` | 服务监听地址 | `0.0.0.0` |
 | `PORT` | 服务端口 | `8080` |
 | `AUTH_USER_CONTEXT_TTL_SECONDS` | Redis 用户上下文缓存时间 | `300` |
@@ -127,7 +111,7 @@ Linux 服务器可使用：
 APP_MODE=postgres \
 DATABASE_URL="postgres://opentab:opentab123@localhost:5432/opentab?sslmode=disable" \
 REDIS_URL="redis://localhost:6379/0" \
-AI_SERVICE_BASE_URL="http://121.40.241.161:8081" \
+AI_SERVICE_BASE_URL="http://<ai-service-host>:8081" \
 HOST=0.0.0.0 \
 PORT=8080 \
 ./scripts/deploy_restart.sh
@@ -142,7 +126,7 @@ curl http://127.0.0.1:8080/health
 公网检查：
 
 ```bash
-curl http://121.40.241.161:8080/health
+curl http://<server-host>:8080/health
 ```
 
 查看日志：

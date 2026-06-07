@@ -10,7 +10,7 @@ const (
 	DefaultPort             = "8080"
 	DefaultHost             = "0.0.0.0"
 	DefaultAppMode          = "mock"
-	DefaultAIServiceBaseURL = "http://121.40.241.161:8081"
+	DefaultAIServiceBaseURL = "http://127.0.0.1:8081"
 )
 
 type Config struct {
