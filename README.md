@@ -37,17 +37,19 @@ AI-OnCall/
 └── 数字冻结表.md                 # 指标口径冻结记录
 ```
 
-## 核心能力
+## 核心工作（以下四项均为个人独立完成）
 
-- **Tool Runtime 治理链**：业务工具只实现 `Tool#execute`，注册 / 参数校验 / 固定窗口限流 / 超时（CompletableFuture）/
-  重试 / 降级由 `ToolExecutor` 统一承担；超时为终态不重试，避免重试挂死的工具继续消耗时间预算；Tool 状态统一透传 SSE。
-- **LLM Diagnostic Loop**：故障理解 → 工具选择 → 工具执行 → 证据回收 → 根因判断 → 修复建议，全流程可追踪。
-- **Semantic Fallback Router**：关键词快路径未命中时兜底判定。特征为 CJK unigram + bigram + ASCII token 三元特征，
-  权重按意图原型语料 IDF 计算（unigram 降权 ×0.4），度量为加权包含度 `containment`，阈值 0.30 于独立 DEV 集冻结；
-  纯 JDK 实现，离线、确定性、无外部模型依赖，保证实验单一变量。
-- **Evaluation Pipeline**：样本按任务类型分类，并进一步按 easy / normal / hard 三档难度分层；统一记录期望工具、
-  实际路由与执行结果，支持指标重聚合、Before/After 对比与 `/metrics` 差值校验。
-- **可观测性**：`trace_id` 贯穿请求 → ToolExecutor → SSE 事件，MDC 上下文拷贝解决异步线程 Trace 丢失。
+- **智能诊断闭环**：将人工排查流程拆解为故障理解 → 工具选择 → 工具执行 → 证据回收 → 根因判断 → 修复建议的可追踪链路；
+  `trace_id` 贯穿请求 → ToolExecutor → SSE 事件，MDC 上下文拷贝解决异步线程 Trace 丢失。
+  P0 真实 LLM 全链路实测 Root Cause Accuracy **95.0%（114/120）**、Diagnosis Pass Rate **77.5%（93/120）**。
+- **ToolRuntime 治理**：抽象 `ToolRegistry` + `ToolExecutor` 统一执行入口，业务工具只实现 `Tool#execute`；
+  参数校验 / 固定窗口限流 / 超时（CompletableFuture，超时为终态不重试）/ 重试 / 降级统一收口，Tool 状态透传 SSE。
+  **15/15 JUnit 分支测试**覆盖（ToolExecutor 9 + SemanticFallbackRouter 6）。
+- **评测体系**：构建 200-case 离线回放评测，样本按任务类型分类 + easy/normal/hard 三档难度分层；统一记录期望工具、
+  实际路由与执行结果，支持指标重聚合、Before/After 对比与 `/metrics` 差值校验；固定种子生成、结果落盘可复现。
+- **语义路由优化**：关键词快路径未命中时，以 CJK unigram + bigram + ASCII token 三元特征 + IDF 加权（unigram 降权 ×0.4）
+  做加权包含度 `containment` 兜底，阈值 0.30 于独立 DEV 集冻结；纯 JDK 实现，离线、确定性、无外部模型依赖——
+  冻结工具 / Prompt / 评测集，仅替换路由层。Tool Selection Accuracy **63.89% → 88.33%（+24.44pt）**，No-Tool 保持 **100%** 不回退。
 
 ## 评测结果（GLM-4-Flash 实测，2026-09-08 冻结）
 
