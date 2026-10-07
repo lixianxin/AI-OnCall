@@ -39,17 +39,20 @@ AI-OnCall/
 
 ## 核心工作（以下四项均为个人独立完成）
 
-- **智能诊断闭环**：将人工排查流程拆解为故障理解 → 工具选择 → 工具执行 → 证据回收 → 根因判断 → 修复建议的可追踪链路；
+- **智能诊断闭环**：面向 NPE、连接超时、SQL 异常等 8 类应用运维故障排查链路长的问题，将人工排查流程拆解为
+  故障理解 → 工具选择 → 工具执行 → 证据回收 → 根因判断 → 修复建议的可追踪链路，4 个业务工具由 Agent 统一编排；
   `trace_id` 贯穿请求 → ToolExecutor → SSE 事件，MDC 上下文拷贝解决异步线程 Trace 丢失。
-  P0 真实 LLM 全链路实测 Root Cause Accuracy **95.0%（114/120）**、Diagnosis Pass Rate **77.5%（93/120）**。
+  P0 真实 LLM 全链路 120 条实测 Root Cause Accuracy **95.0%（114/120）**、Diagnosis Pass Rate **77.5%（93/120）**。
 - **ToolRuntime 治理**：抽象 `ToolRegistry` + `ToolExecutor` 统一执行入口，业务工具只实现 `Tool#execute`；
-  参数校验 / 固定窗口限流 / 超时（CompletableFuture，超时为终态不重试）/ 重试 / 降级统一收口，Tool 状态透传 SSE。
-  **15/15 JUnit 分支测试**覆盖（ToolExecutor 9 + SemanticFallbackRouter 6）。
-- **评测体系**：构建 200-case 离线回放评测，样本按任务类型分类 + easy/normal/hard 三档难度分层；统一记录期望工具、
-  实际路由与执行结果，支持指标重聚合、Before/After 对比与 `/metrics` 差值校验；固定种子生成、结果落盘可复现。
-- **语义路由优化**：关键词快路径未命中时，以 CJK unigram + bigram + ASCII token 三元特征 + IDF 加权（unigram 降权 ×0.4）
-  做加权包含度 `containment` 兜底，阈值 0.30 于独立 DEV 集冻结；纯 JDK 实现，离线、确定性、无外部模型依赖——
-  冻结工具 / Prompt / 评测集，仅替换路由层。Tool Selection Accuracy **63.89% → 88.33%（+24.44pt）**，No-Tool 保持 **100%** 不回退。
+  参数校验 / 滑动窗口日志限流 / 超时（CompletableFuture，超时为终态不重试）/ 重试 / 降级统一收口，Tool 状态透传 SSE。
+  **15/15 JUnit 治理分支用例通过**（ToolExecutor 9 + SemanticFallbackRouter 6）。
+- **评测体系**：构建 200-case 离线回放评测，覆盖 8 类根因，按任务类型分类 + easy（直接点名异常）/ normal（证据藏堆栈）/
+  hard（零关键词纯症状）三档分层；统一记录期望工具、实际路由与执行结果，支持指标重聚合、Before/After 对比与
+  `/metrics` 差值校验；固定种子生成、结果落盘可复现。
+- **轻量路由兜底**：针对关键词快路径在自然语言故障描述下 0 命中即误路由的问题，构造零关键词泄漏 hard 集；
+  以 CJK unigram + bigram + ASCII token 三元特征 + IDF 加权（unigram 降权 ×0.4）做加权包含度 `containment` 兜底，
+  阈值 0.30 于独立 DEV 集冻结；纯 JDK 实现，离线、确定性、无外部模型依赖——冻结工具 / Prompt / 评测集，仅替换路由层。
+  Tool Selection Accuracy **63.89% → 88.33%（+24.44pt）**，No-Tool 保持 **100%** 不回退。
 
 ## 评测结果（GLM-4-Flash 实测，2026-09-08 冻结）
 
