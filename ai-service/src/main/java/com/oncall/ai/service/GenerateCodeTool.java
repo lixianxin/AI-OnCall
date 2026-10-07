@@ -3,9 +3,19 @@ package com.oncall.ai.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class GenerateCodeTool implements ToolExecutor {
+import org.springframework.stereotype.Component;
+
+@Component
+public class GenerateCodeTool implements Tool {
 
     private static final int TOP_K = 5;
+
+    @Override
+    public ToolSpec spec() {
+        // 代码生成：最重、最慢，超时最长、限流最紧、不重试（成本高）
+        return new ToolSpec("generate", "基于检索模板的代码生成",
+                5000, 1, 10, java.util.List.of("query"));
+    }
 
     @Override
     public ToolResult execute(ToolContext context) {

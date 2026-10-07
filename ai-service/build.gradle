@@ -30,3 +30,8 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// 源码含中文字符串字面量，Windows 平台默认 GBK 会乱码 → 强制 UTF-8 编译
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

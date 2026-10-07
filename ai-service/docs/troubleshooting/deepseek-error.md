@@ -31,7 +31,7 @@ DeepSeek API error: status=XXX, body=...
 `yaml
 # /opt/ai-oncall/application.yml
 deepseek:
-  api-key: sk-207987ffc28548b497c903c5371ae8bd
+  api-key: ${DEEPSEEK_API_KEY:replace-me}
   base-url: https://api.deepseek.com
   model: deepseek-chat
 `

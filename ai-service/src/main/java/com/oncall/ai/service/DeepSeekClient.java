@@ -31,14 +31,17 @@ public class DeepSeekClient {
     private final String baseUrl;
     private final String modelName;
     private final HttpClient httpClient;
+    private final AgentMetrics agentMetrics;
 
     public DeepSeekClient(
             @Value("${deepseek.api-key}") String apiKey,
             @Value("${deepseek.base-url:https://api.deepseek.com}") String baseUrl,
-            @Value("${deepseek.model:deepseek-chat}") String modelName) {
+            @Value("${deepseek.model:deepseek-chat}") String modelName,
+            AgentMetrics agentMetrics) {
         this.apiKey = apiKey;
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.modelName = modelName;
+        this.agentMetrics = agentMetrics;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
@@ -46,8 +49,9 @@ public class DeepSeekClient {
 
     public Flux<String> stream(String systemPrompt, Conversation conversation, String userMessage, String detailData) {
         String prompt = buildPrompt(systemPrompt, conversation, userMessage, detailData);
+        // include_usage: 流式最后一帧携带 usage（prompt/completion tokens），用于可观测性统计
         String requestBody = String.format("""
-                {"model":"%s","stream":true,"messages":%s}
+                {"model":"%s","stream":true,"stream_options":{"include_usage":true},"messages":%s}
                 """, modelName, prompt).stripIndent().strip();
 
         log.debug("DeepSeek request: model={}, promptLen={}", modelName, requestBody.length());
@@ -86,6 +90,7 @@ public class DeepSeekClient {
                                         if ("[DONE]".equals(data)) {
                                             break;
                                         }
+                                        recordUsageIfPresent(data);
                                         String content = extractDeltaContent(data);
                                         if (content != null && !content.isEmpty()) {
                                             sink.next(content);
@@ -109,6 +114,22 @@ public class DeepSeekClient {
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /** 流式最后一帧（choices 为空、携带 usage）时记录 token 用量到指标层 */
+    private void recordUsageIfPresent(String jsonData) {
+        try {
+            var root = objectMapper.readTree(jsonData);
+            var usage = root.get("usage");
+            if (usage == null || usage.isNull()) return;
+            long promptTokens = usage.path("prompt_tokens").asLong(0);
+            long completionTokens = usage.path("completion_tokens").asLong(0);
+            if (promptTokens > 0) agentMetrics.recordTokens("llm_prompt", promptTokens);
+            if (completionTokens > 0) agentMetrics.recordTokens("llm_completion", completionTokens);
+            log.debug("DeepSeek usage recorded: prompt={}, completion={}", promptTokens, completionTokens);
+        } catch (Exception e) {
+            log.debug("Failed to parse usage frame", e);
+        }
+    }
 
     private String extractDeltaContent(String jsonData) {
         try {

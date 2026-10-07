@@ -5,9 +5,19 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class AnalyzeLogTool implements ToolExecutor {
+import org.springframework.stereotype.Component;
+
+@Component
+public class AnalyzeLogTool implements Tool {
 
     private static final List<LogPattern> PATTERNS = new ArrayList<>();
+
+    @Override
+    public ToolSpec spec() {
+        // 日志诊断：正则匹配可能较慢，允许更长超时 + 重试，限流更紧
+        return new ToolSpec("analyze_log", "错误日志模式匹配与根因诊断",
+                4000, 2, 20, java.util.List.of("query"));
+    }
 
     static {
         PATTERNS.add(new LogPattern(
