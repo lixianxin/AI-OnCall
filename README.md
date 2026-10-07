@@ -40,16 +40,17 @@ AI-OnCall/
 ## 核心工作（以下四项均为个人独立完成）
 
 - **智能诊断闭环**：面向 NPE、连接超时、SQL 异常等 8 类应用运维故障排查链路长的问题，将人工排查流程拆解为
-  故障理解 → 工具选择 → 工具执行 → 证据回收 → 根因判断 → 修复建议的可追踪链路，4 个业务工具由 Agent 统一编排；
+  故障理解 → 工具选择 → 工具执行 → 证据回收 → 根因判断 → 修复建议的可追踪链路，统一编排 4 个注册工具
+  （回放端到端覆盖 3 个：analyze_log / search / generate，read 无路由触发、经单测验证）；
   `trace_id` 贯穿请求 → ToolExecutor → SSE 事件，MDC 上下文拷贝解决异步线程 Trace 丢失。
-  P0 真实 LLM 全链路 120 条实测 Root Cause Accuracy **95.0%（114/120）**、Diagnosis Pass Rate **77.5%（93/120）**。
+  在 200 条全链路回放的 120 条诊断样本上实测 Root Cause Accuracy **95.0%（114/120）**、Diagnosis Pass Rate **77.5%（93/120）**。
 - **ToolRuntime 治理**：抽象 `ToolRegistry` + `ToolExecutor` 统一执行入口，业务工具只实现 `Tool#execute`；
   参数校验 / 滑动窗口日志限流 / 超时（CompletableFuture，超时为终态不重试）/ 重试 / 降级统一收口，Tool 状态透传 SSE。
   **15/15 JUnit 治理分支用例通过**（ToolExecutor 9 + SemanticFallbackRouter 6）。
-- **评测体系**：构建 200-case 离线回放评测，覆盖 8 类根因，按任务类型分类 + easy（直接点名异常）/ normal（证据藏堆栈）/
-  hard（零关键词纯症状）三档分层；统一记录期望工具、实际路由与执行结果，支持指标重聚合、Before/After 对比与
-  `/metrics` 差值校验；固定种子生成、结果落盘可复现。
-- **轻量路由兜底**：针对关键词快路径在自然语言故障描述下 0 命中即误路由的问题，构造零关键词泄漏 hard 集；
+- **评测体系**：构建 200-case 离线回放评测（120 故障诊断 + 30 文档问答 + 30 代码生成 + 20 闲聊），覆盖全部 8 类故障根因，
+  按任务类型分类 + easy（直接点名异常）/ normal（证据藏堆栈）/ hard（零关键词纯症状）三档分层；
+  统一记录期望工具、实际路由与执行结果，支持指标重聚合、Before/After 对比与 `/metrics` 差值校验；固定种子生成、结果落盘可复现。
+- **轻量路由兜底**：针对关键词快路径在自然语言故障描述下 0 命中时易误路由的问题，构造零关键词泄漏 hard 集；
   以 CJK unigram + bigram + ASCII token 三元特征 + IDF 加权（unigram 降权 ×0.4）做加权包含度 `containment` 兜底，
   阈值 0.30 于独立 DEV 集冻结；纯 JDK 实现，离线、确定性、无外部模型依赖——冻结工具 / Prompt / 评测集，仅替换路由层。
   Tool Selection Accuracy **63.89% → 88.33%（+24.44pt）**，No-Tool 保持 **100%** 不回退。
@@ -61,8 +62,8 @@ AI-OnCall/
 | Tool Selection Accuracy | **63.89% → 88.33%（+24.44pt）** | v2 分层集，冻结变量仅替换路由层 |
 | v1 Tool Selection Accuracy | **99.44%** | diagnosis_v1（200 条） |
 | No-Tool 准确率 | **100%**（未回退） | v2 |
-| Root Cause Accuracy | **95.0%（114/120）** | P0 真实 LLM 全链路；基于预定义 ground truth 的自动规则评测（标签/别名匹配） |
-| Diagnosis Pass Rate | **77.5%（93/120）** | 端到端口径 = 意图 AND 工具 AND 根因三关全过 |
+| Root Cause Accuracy | **95.0%（114/120）** | P0 真实 LLM 全链路（v2 200 条回放中的 120 条诊断样本）；基于预定义 ground truth 的自动规则评测（标签/别名匹配） |
+| Diagnosis Pass Rate | **77.5%（93/120）** | 同 120 条诊断样本；端到端口径 = 意图 AND 工具 AND 根因三关全过 |
 
 > **链路稳定性验证（非性能结论）**：JMeter 2 线程 / 120s，48 请求 **0 错误**、P99 16.9s。
 > 该结果用于验证链路稳定性与容量瓶颈归属，端到端延迟主要受上游 LLM 推理与**免费档并发上限**影响
