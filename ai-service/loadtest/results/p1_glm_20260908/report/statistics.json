@@ -1,0 +1,34 @@
+{
+  "Total" : {
+    "transaction" : "Total",
+    "sampleCount" : 47,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 4795.510638297871,
+    "medianResTime" : 4410.0,
+    "minResTime" : 709.0,
+    "maxResTime" : 16926.0,
+    "pct1ResTime" : 7869.200000000004,
+    "pct2ResTime" : 14453.599999999966,
+    "pct3ResTime" : 16926.0,
+    "throughput" : 0.39667803247695893,
+    "receivedKBytesPerSec" : 2.158362692958543,
+    "sentKBytesPerSec" : 0.13597069277286386
+  },
+  "POST /api/chat/stream" : {
+    "transaction" : "POST /api/chat/stream",
+    "sampleCount" : 47,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 4795.510638297871,
+    "medianResTime" : 4410.0,
+    "minResTime" : 709.0,
+    "maxResTime" : 16926.0,
+    "pct1ResTime" : 7869.200000000004,
+    "pct2ResTime" : 14453.599999999966,
+    "pct3ResTime" : 16926.0,
+    "throughput" : 0.39667803247695893,
+    "receivedKBytesPerSec" : 2.158362692958543,
+    "sentKBytesPerSec" : 0.13597069277286386
+  }
+}

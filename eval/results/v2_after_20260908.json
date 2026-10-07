@@ -1,0 +1,4488 @@
+{
+  "dataset": "diagnosis_v2",
+  "samples": 200,
+  "intent_accuracy": 89.5,
+  "tool_task_samples": 180,
+  "tool_selection_accuracy": 88.33,
+  "no_tool_samples": 20,
+  "no_tool_accuracy": 100.0,
+  "tool_routing_accuracy": 89.5,
+  "diagnosis_samples": 120,
+  "diag_llm_error_samples": 120,
+  "root_cause_accuracy": null,
+  "root_cause_na": "llm_outage",
+  "diagnosis_pass_rate": null,
+  "avg_latency_ms": 106.8,
+  "p95_latency_ms": 177.6,
+  "p99_latency_ms": 535.8,
+  "first_event_avg_ms": 29.8,
+  "first_event_p99_ms": 60.3,
+  "fallback_count": 120,
+  "fallback_rate": 60.0,
+  "llm_error_rate": 1.0,
+  "tool_retry_rate": 0.0,
+  "token_usage": {},
+  "by_difficulty": {
+    "easy": {
+      "samples": 60,
+      "intent_accuracy": 98.33,
+      "tool_task_samples": 40,
+      "tool_selection_accuracy": 97.5,
+      "no_tool_samples": 20,
+      "no_tool_accuracy": 100.0,
+      "root_cause_accuracy": null
+    },
+    "hard": {
+      "samples": 40,
+      "intent_accuracy": 75.0,
+      "tool_task_samples": 40,
+      "tool_selection_accuracy": 75.0,
+      "no_tool_samples": 0,
+      "no_tool_accuracy": null,
+      "root_cause_accuracy": null
+    },
+    "normal": {
+      "samples": 100,
+      "intent_accuracy": 90.0,
+      "tool_task_samples": 100,
+      "tool_selection_accuracy": 90.0,
+      "no_tool_samples": 0,
+      "no_tool_accuracy": null,
+      "root_cause_accuracy": null
+    }
+  },
+  "metrics_delta": {
+    "calls_by_status": {
+      "generate:rate_limited": 40,
+      "analyze_log:rate_limited": 80,
+      "generate:success": 10,
+      "analyze_log:success": 19,
+      "search:success": 30
+    },
+    "errors_by_tool": {
+      "analyze_log": 80,
+      "generate": 40
+    },
+    "per_tool": {
+      "analyze_log": {
+        "errors": 80,
+        "calls": 99,
+        "avg_latency_ms": -36,
+        "total_latency_ms": 51
+      },
+      "generate": {
+        "total_latency_ms": 114,
+        "calls": 50,
+        "errors": 40,
+        "avg_latency_ms": 2
+      },
+      "search": {
+        "total_latency_ms": 312,
+        "calls": 30,
+        "avg_latency_ms": 10
+      }
+    }
+  },
+  "per_case": [
+    {
+      "id": "diag_066",
+      "input": "订单写入失败，日志：java.sql.SQLException: Duplicate entry 'xxx' for key 'PRIMARY'（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 50.0,
+      "total_ms": 114.1
+    },
+    {
+      "id": "chat_007",
+      "input": "你好，你是谁呀，急",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 9.3,
+      "total_ms": 78.3
+    },
+    {
+      "id": "diag_101",
+      "input": "AI 回答生成一半就停了，前端等不到后续内容只能手动刷新（联调环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 36.5,
+      "total_ms": 108.1
+    },
+    {
+      "id": "chat_013",
+      "input": "今天天气不错，心情很好怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 10.2,
+      "total_ms": 71.1
+    },
+    {
+      "id": "diag_111",
+      "input": "生成功能时好时坏，日志显示 HTTP 401 from api.deepseek.com（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 35.0,
+      "total_ms": 99.7
+    },
+    {
+      "id": "qa_001",
+      "input": "tab manifest 里注册路由的协议字段说明（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 47.6,
+      "total_ms": 109.7
+    },
+    {
+      "id": "diag_013",
+      "input": "调用窗口接口后服务退出了，日志末尾一大段堆栈指向 WindowService.java:88怎么办？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 48.6,
+      "total_ms": 125.5
+    },
+    {
+      "id": "diag_002",
+      "input": "调用 窗口 接口报 NullPointerException，帮忙排查一下（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 29.8,
+      "total_ms": 94.1
+    },
+    {
+      "id": "diag_064",
+      "input": "执行 SQL 报 SQLException 死锁如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 54.9,
+      "total_ms": 119.2
+    },
+    {
+      "id": "diag_044",
+      "input": "A 机房调 B 机房突然全不通了，telnet 端口直接被拒如何排查？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 40.7,
+      "total_ms": 140.3
+    },
+    {
+      "id": "qa_016",
+      "input": "协议文档中权限相关的配置说明（复现步骤见附件）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 46.6,
+      "total_ms": 107.6
+    },
+    {
+      "id": "gen_020",
+      "input": "实现一个分页加载的 Repository",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 28.9,
+      "total_ms": 92.6
+    },
+    {
+      "id": "qa_008",
+      "input": "tab manifest 里注册路由的协议字段说明（昨天开始出现）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 54.3,
+      "total_ms": 113.9
+    },
+    {
+      "id": "diag_076",
+      "input": "Android 模拟器黑屏了（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 28.6,
+      "total_ms": 93.4
+    },
+    {
+      "id": "gen_008",
+      "input": "帮我写一个 Kotlin Repository 实现类（昨天开始出现）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 29.8,
+      "total_ms": 93.7
+    },
+    {
+      "id": "gen_017",
+      "input": "用 Compose 生成一个列表页代码，急",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 32.5,
+      "total_ms": 95.6
+    },
+    {
+      "id": "diag_045",
+      "input": "接口读取超时，Read timed out",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 29.0,
+      "total_ms": 89.4
+    },
+    {
+      "id": "qa_010",
+      "input": "协议文档中权限相关的配置说明",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 49.2,
+      "total_ms": 113.0
+    },
+    {
+      "id": "diag_030",
+      "input": "连接超时，日志提示 Connection refused",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 51.9,
+      "total_ms": 124.8
+    },
+    {
+      "id": "diag_003",
+      "input": "调用 窗口 接口报 NullPointerException，帮忙排查一下怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 27.5,
+      "total_ms": 89.3
+    },
+    {
+      "id": "gen_009",
+      "input": "帮我写一个 Kotlin Repository 实现类求帮助",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 29.3,
+      "total_ms": 98.9
+    },
+    {
+      "id": "diag_015",
+      "input": "HTTPS 握手失败，报 SSLException",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 27.2,
+      "total_ms": 177.6
+    },
+    {
+      "id": "diag_042",
+      "input": "A 机房调 B 机房突然全不通了，telnet 端口直接被拒（线上环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 52.7,
+      "total_ms": 115.9
+    },
+    {
+      "id": "qa_006",
+      "input": "tab manifest 里注册路由的协议字段说明（复现步骤见附件）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 35.5,
+      "total_ms": 104.5
+    },
+    {
+      "id": "chat_006",
+      "input": "你好，你是谁呀（复现步骤见附件）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.8,
+      "total_ms": 66.9
+    },
+    {
+      "id": "gen_012",
+      "input": "用 Compose 生成一个列表页代码（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 40.3,
+      "total_ms": 99.6
+    },
+    {
+      "id": "diag_047",
+      "input": "接口读取超时，Read timed out（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.0,
+      "total_ms": 93.6
+    },
+    {
+      "id": "diag_110",
+      "input": "生成功能时好时坏，日志显示 HTTP 401 from api.deepseek.com",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 43.0,
+      "total_ms": 115.4
+    },
+    {
+      "id": "diag_005",
+      "input": "用户反馈保存草稿失败，日志贴出来是一段 Caused by: java.lang.NullPointerException 的堆栈",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.2,
+      "total_ms": 535.8
+    },
+    {
+      "id": "chat_014",
+      "input": "今天天气不错，心情很好如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 7.4,
+      "total_ms": 69.2
+    },
+    {
+      "id": "diag_037",
+      "input": "服务间调用不通，日志里有 java.net.ConnectException: Connection refused（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.3,
+      "total_ms": 86.5
+    },
+    {
+      "id": "qa_002",
+      "input": "tab manifest 里注册路由的协议字段说明（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 60.6,
+      "total_ms": 133.1
+    },
+    {
+      "id": "diag_012",
+      "input": "调用窗口接口后服务退出了，日志末尾一大段堆栈指向 WindowService.java:88（线上环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 49.3,
+      "total_ms": 119.0
+    },
+    {
+      "id": "diag_036",
+      "input": "服务间调用不通，日志里有 java.net.ConnectException: Connection refused（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 27.0,
+      "total_ms": 87.3
+    },
+    {
+      "id": "gen_003",
+      "input": "帮我写一个 Kotlin Repository 实现类怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 47.1,
+      "total_ms": 110.1
+    },
+    {
+      "id": "diag_069",
+      "input": "订单写入失败，日志：java.sql.SQLException: Duplicate entry 'xxx' for key 'PRIMARY'如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 29.1,
+      "total_ms": 86.2
+    },
+    {
+      "id": "diag_061",
+      "input": "执行 SQL 报 SQLException 死锁（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.1,
+      "total_ms": 89.2
+    },
+    {
+      "id": "chat_015",
+      "input": "今天天气不错，心情很好灰度期间出现的",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 20.4,
+      "total_ms": 205.1
+    },
+    {
+      "id": "diag_032",
+      "input": "连接超时，日志提示 Connection refused（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.0,
+      "total_ms": 87.0
+    },
+    {
+      "id": "gen_022",
+      "input": "实现一个分页加载的 Repository（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 41.9,
+      "total_ms": 101.8
+    },
+    {
+      "id": "gen_021",
+      "input": "实现一个分页加载的 Repository（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 38.6,
+      "total_ms": 99.0
+    },
+    {
+      "id": "diag_060",
+      "input": "执行 SQL 报 SQLException 死锁",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 44.1,
+      "total_ms": 111.7
+    },
+    {
+      "id": "diag_010",
+      "input": "调用窗口接口后服务退出了，日志末尾一大段堆栈指向 WindowService.java:88",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 37.2,
+      "total_ms": 97.8
+    },
+    {
+      "id": "qa_024",
+      "input": "讲一下 manifest 的注册协议如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 58.2,
+      "total_ms": 118.0
+    },
+    {
+      "id": "gen_010",
+      "input": "用 Compose 生成一个列表页代码",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 15.9,
+      "total_ms": 76.7
+    },
+    {
+      "id": "diag_052",
+      "input": "下游接口偶发拿不到响应，日志：java.net.SocketTimeoutException: Read timed out（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 25.5,
+      "total_ms": 90.3
+    },
+    {
+      "id": "qa_005",
+      "input": "tab manifest 里注册路由的协议字段说明灰度期间出现的",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 39.0,
+      "total_ms": 110.0
+    },
+    {
+      "id": "diag_106",
+      "input": "DeepSeek API 返回 401（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 42.7,
+      "total_ms": 114.3
+    },
+    {
+      "id": "diag_073",
+      "input": "下单时那条记录写不进去，提示主键重复，帮忙看看怎么办？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 38.8,
+      "total_ms": 101.4
+    },
+    {
+      "id": "diag_113",
+      "input": "生成功能时好时坏，日志显示 HTTP 401 from api.deepseek.com怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 34.3,
+      "total_ms": 100.9
+    },
+    {
+      "id": "diag_105",
+      "input": "DeepSeek API 返回 401",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.6,
+      "total_ms": 106.5
+    },
+    {
+      "id": "diag_095",
+      "input": "回答生成到一半就停了，抓包看是 text/event-stream 的连接被服务端断开",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 28.5,
+      "total_ms": 95.8
+    },
+    {
+      "id": "diag_103",
+      "input": "AI 回答生成一半就停了，前端等不到后续内容只能手动刷新怎么办？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 20.1,
+      "total_ms": 91.3
+    },
+    {
+      "id": "qa_025",
+      "input": "讲一下 manifest 的注册协议灰度期间出现的",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 47.1,
+      "total_ms": 114.3
+    },
+    {
+      "id": "diag_043",
+      "input": "A 机房调 B 机房突然全不通了，telnet 端口直接被拒怎么办？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.0,
+      "total_ms": 236.2
+    },
+    {
+      "id": "diag_000",
+      "input": "调用 窗口 接口报 NullPointerException，帮忙排查一下",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.8,
+      "total_ms": 81.4
+    },
+    {
+      "id": "gen_011",
+      "input": "用 Compose 生成一个列表页代码（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 19.0,
+      "total_ms": 83.4
+    },
+    {
+      "id": "chat_012",
+      "input": "今天天气不错，心情很好（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 15.2,
+      "total_ms": 73.3
+    },
+    {
+      "id": "diag_016",
+      "input": "HTTPS 握手失败，报 SSLException（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 23.8,
+      "total_ms": 86.3
+    },
+    {
+      "id": "diag_080",
+      "input": "模拟器起来之后画面全黑，logcat 显示系统服务一切正常",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 28.7,
+      "total_ms": 91.7
+    },
+    {
+      "id": "diag_102",
+      "input": "AI 回答生成一半就停了，前端等不到后续内容只能手动刷新（线上环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 16.6,
+      "total_ms": 80.6
+    },
+    {
+      "id": "diag_038",
+      "input": "服务间调用不通，日志里有 java.net.ConnectException: Connection refused怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 49.4,
+      "total_ms": 139.8
+    },
+    {
+      "id": "gen_006",
+      "input": "帮我写一个 Kotlin Repository 实现类（复现步骤见附件）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 40.3,
+      "total_ms": 104.8
+    },
+    {
+      "id": "gen_026",
+      "input": "实现一个分页加载的 Repository（复现步骤见附件）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 15.1,
+      "total_ms": 78.4
+    },
+    {
+      "id": "qa_015",
+      "input": "协议文档中权限相关的配置说明灰度期间出现的",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 40.2,
+      "total_ms": 96.8
+    },
+    {
+      "id": "diag_078",
+      "input": "Android 模拟器黑屏了怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 29.2,
+      "total_ms": 88.1
+    },
+    {
+      "id": "diag_115",
+      "input": "AI 生成功能集体罢工，日志里有 401 字样",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 17.8,
+      "total_ms": 74.6
+    },
+    {
+      "id": "diag_019",
+      "input": "HTTPS 握手失败，报 SSLException如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 37.1,
+      "total_ms": 96.1
+    },
+    {
+      "id": "diag_014",
+      "input": "调用窗口接口后服务退出了，日志末尾一大段堆栈指向 WindowService.java:88如何排查？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 49.8,
+      "total_ms": 122.0
+    },
+    {
+      "id": "gen_027",
+      "input": "实现一个分页加载的 Repository，急",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 15.2,
+      "total_ms": 81.5
+    },
+    {
+      "id": "qa_026",
+      "input": "讲一下 manifest 的注册协议（复现步骤见附件）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 36.2,
+      "total_ms": 95.7
+    },
+    {
+      "id": "gen_029",
+      "input": "实现一个分页加载的 Repository求帮助",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 14.5,
+      "total_ms": 76.3
+    },
+    {
+      "id": "diag_065",
+      "input": "订单写入失败，日志：java.sql.SQLException: Duplicate entry 'xxx' for key 'PRIMARY'",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.2,
+      "total_ms": 82.1
+    },
+    {
+      "id": "diag_084",
+      "input": "模拟器起来之后画面全黑，logcat 显示系统服务一切正常如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 29.8,
+      "total_ms": 88.5
+    },
+    {
+      "id": "gen_015",
+      "input": "用 Compose 生成一个列表页代码灰度期间出现的",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 16.7,
+      "total_ms": 78.2
+    },
+    {
+      "id": "diag_046",
+      "input": "接口读取超时，Read timed out（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 23.4,
+      "total_ms": 82.0
+    },
+    {
+      "id": "diag_104",
+      "input": "AI 回答生成一半就停了，前端等不到后续内容只能手动刷新如何排查？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 15.9,
+      "total_ms": 79.0
+    },
+    {
+      "id": "diag_079",
+      "input": "Android 模拟器黑屏了如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 29.2,
+      "total_ms": 101.5
+    },
+    {
+      "id": "diag_054",
+      "input": "下游接口偶发拿不到响应，日志：java.net.SocketTimeoutException: Read timed out如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 27.4,
+      "total_ms": 86.3
+    },
+    {
+      "id": "chat_016",
+      "input": "今天天气不错，心情很好（复现步骤见附件）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 19.8,
+      "total_ms": 76.9
+    },
+    {
+      "id": "diag_085",
+      "input": "模拟器能起来但画面全黑，logcat 里 system_server 一切正常",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.4,
+      "total_ms": 85.9
+    },
+    {
+      "id": "diag_118",
+      "input": "AI 生成功能集体罢工，日志里有 401 字样怎么办？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 36.2,
+      "total_ms": 95.7
+    },
+    {
+      "id": "diag_109",
+      "input": "DeepSeek API 返回 401如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 43.5,
+      "total_ms": 103.9
+    },
+    {
+      "id": "qa_013",
+      "input": "协议文档中权限相关的配置说明怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 39.6,
+      "total_ms": 102.1
+    },
+    {
+      "id": "qa_022",
+      "input": "讲一下 manifest 的注册协议（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 46.5,
+      "total_ms": 113.9
+    },
+    {
+      "id": "diag_033",
+      "input": "连接超时，日志提示 Connection refused怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 23.5,
+      "total_ms": 82.7
+    },
+    {
+      "id": "diag_018",
+      "input": "HTTPS 握手失败，报 SSLException怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 42.3,
+      "total_ms": 107.4
+    },
+    {
+      "id": "qa_020",
+      "input": "讲一下 manifest 的注册协议",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 54.8,
+      "total_ms": 116.3
+    },
+    {
+      "id": "qa_003",
+      "input": "tab manifest 里注册路由的协议字段说明怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 37.9,
+      "total_ms": 99.6
+    },
+    {
+      "id": "gen_025",
+      "input": "实现一个分页加载的 Repository灰度期间出现的",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 15.2,
+      "total_ms": 78.1
+    },
+    {
+      "id": "diag_063",
+      "input": "执行 SQL 报 SQLException 死锁怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.7,
+      "total_ms": 94.9
+    },
+    {
+      "id": "diag_083",
+      "input": "模拟器起来之后画面全黑，logcat 显示系统服务一切正常怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 25.9,
+      "total_ms": 90.4
+    },
+    {
+      "id": "qa_028",
+      "input": "讲一下 manifest 的注册协议（昨天开始出现）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 34.3,
+      "total_ms": 394.3
+    },
+    {
+      "id": "diag_100",
+      "input": "AI 回答生成一半就停了，前端等不到后续内容只能手动刷新",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 19.7,
+      "total_ms": 89.4
+    },
+    {
+      "id": "gen_005",
+      "input": "帮我写一个 Kotlin Repository 实现类灰度期间出现的",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 27.6,
+      "total_ms": 85.0
+    },
+    {
+      "id": "diag_072",
+      "input": "下单时那条记录写不进去，提示主键重复，帮忙看看（线上环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 49.5,
+      "total_ms": 131.7
+    },
+    {
+      "id": "diag_027",
+      "input": "新装机的用户连不上网，抓包看 TLS 握手那一步就被服务端断了（线上环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.3,
+      "total_ms": 116.9
+    },
+    {
+      "id": "chat_004",
+      "input": "你好，你是谁呀如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 6.1,
+      "total_ms": 60.3
+    },
+    {
+      "id": "diag_112",
+      "input": "生成功能时好时坏，日志显示 HTTP 401 from api.deepseek.com（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 17.2,
+      "total_ms": 78.4
+    },
+    {
+      "id": "diag_051",
+      "input": "下游接口偶发拿不到响应，日志：java.net.SocketTimeoutException: Read timed out（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.8,
+      "total_ms": 89.9
+    },
+    {
+      "id": "gen_024",
+      "input": "实现一个分页加载的 Repository如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 29.0,
+      "total_ms": 86.4
+    },
+    {
+      "id": "diag_004",
+      "input": "调用 窗口 接口报 NullPointerException，帮忙排查一下如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 25.1,
+      "total_ms": 90.1
+    },
+    {
+      "id": "diag_029",
+      "input": "新装机的用户连不上网，抓包看 TLS 握手那一步就被服务端断了如何排查？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 29.7,
+      "total_ms": 93.0
+    },
+    {
+      "id": "chat_003",
+      "input": "你好，你是谁呀怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.6,
+      "total_ms": 234.2
+    },
+    {
+      "id": "diag_099",
+      "input": "回答生成到一半就停了，抓包看是 text/event-stream 的连接被服务端断开如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 16.0,
+      "total_ms": 89.7
+    },
+    {
+      "id": "diag_098",
+      "input": "回答生成到一半就停了，抓包看是 text/event-stream 的连接被服务端断开怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 15.4,
+      "total_ms": 74.6
+    },
+    {
+      "id": "qa_011",
+      "input": "协议文档中权限相关的配置说明（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 60.3,
+      "total_ms": 118.6
+    },
+    {
+      "id": "qa_004",
+      "input": "tab manifest 里注册路由的协议字段说明如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 53.2,
+      "total_ms": 114.2
+    },
+    {
+      "id": "chat_018",
+      "input": "今天天气不错，心情很好（昨天开始出现）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 31.4,
+      "total_ms": 88.5
+    },
+    {
+      "id": "qa_014",
+      "input": "协议文档中权限相关的配置说明如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 38.8,
+      "total_ms": 100.3
+    },
+    {
+      "id": "gen_028",
+      "input": "实现一个分页加载的 Repository（昨天开始出现）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 15.5,
+      "total_ms": 90.3
+    },
+    {
+      "id": "qa_000",
+      "input": "tab manifest 里注册路由的协议字段说明",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 33.9,
+      "total_ms": 111.4
+    },
+    {
+      "id": "diag_034",
+      "input": "连接超时，日志提示 Connection refused如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 48.1,
+      "total_ms": 346.7
+    },
+    {
+      "id": "diag_048",
+      "input": "接口读取超时，Read timed out怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.6,
+      "total_ms": 86.9
+    },
+    {
+      "id": "gen_019",
+      "input": "用 Compose 生成一个列表页代码求帮助",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 25.4,
+      "total_ms": 86.4
+    },
+    {
+      "id": "qa_018",
+      "input": "协议文档中权限相关的配置说明（昨天开始出现）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 36.4,
+      "total_ms": 97.3
+    },
+    {
+      "id": "qa_029",
+      "input": "讲一下 manifest 的注册协议求帮助",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 36.1,
+      "total_ms": 96.5
+    },
+    {
+      "id": "qa_012",
+      "input": "协议文档中权限相关的配置说明（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 35.0,
+      "total_ms": 125.0
+    },
+    {
+      "id": "qa_007",
+      "input": "tab manifest 里注册路由的协议字段说明，急",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 37.4,
+      "total_ms": 98.5
+    },
+    {
+      "id": "diag_021",
+      "input": "灰度用户反馈 HTTPS 请求全部失败，日志：javax.net.ssl.SSLHandshakeException: handshake_failure（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 44.3,
+      "total_ms": 106.4
+    },
+    {
+      "id": "diag_081",
+      "input": "模拟器起来之后画面全黑，logcat 显示系统服务一切正常（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 30.2,
+      "total_ms": 143.0
+    },
+    {
+      "id": "diag_077",
+      "input": "Android 模拟器黑屏了（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 28.9,
+      "total_ms": 103.5
+    },
+    {
+      "id": "diag_009",
+      "input": "用户反馈保存草稿失败，日志贴出来是一段 Caused by: java.lang.NullPointerException 的堆栈如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 27.0,
+      "total_ms": 133.0
+    },
+    {
+      "id": "diag_082",
+      "input": "模拟器起来之后画面全黑，logcat 显示系统服务一切正常（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 30.9,
+      "total_ms": 87.5
+    },
+    {
+      "id": "gen_014",
+      "input": "用 Compose 生成一个列表页代码如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 40.2,
+      "total_ms": 317.2
+    },
+    {
+      "id": "diag_119",
+      "input": "AI 生成功能集体罢工，日志里有 401 字样如何排查？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 17.0,
+      "total_ms": 77.2
+    },
+    {
+      "id": "diag_089",
+      "input": "模拟器能起来但画面全黑，logcat 里 system_server 一切正常如何排查？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 32.3,
+      "total_ms": 98.7
+    },
+    {
+      "id": "diag_068",
+      "input": "订单写入失败，日志：java.sql.SQLException: Duplicate entry 'xxx' for key 'PRIMARY'怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.8,
+      "total_ms": 88.1
+    },
+    {
+      "id": "diag_053",
+      "input": "下游接口偶发拿不到响应，日志：java.net.SocketTimeoutException: Read timed out怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.7,
+      "total_ms": 84.2
+    },
+    {
+      "id": "diag_090",
+      "input": "SSE 连接断开，回答中断",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 39.4,
+      "total_ms": 109.1
+    },
+    {
+      "id": "diag_094",
+      "input": "SSE 连接断开，回答中断如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.8,
+      "total_ms": 90.4
+    },
+    {
+      "id": "diag_041",
+      "input": "A 机房调 B 机房突然全不通了，telnet 端口直接被拒（联调环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.8,
+      "total_ms": 90.0
+    },
+    {
+      "id": "diag_093",
+      "input": "SSE 连接断开，回答中断怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 40.6,
+      "total_ms": 108.1
+    },
+    {
+      "id": "diag_116",
+      "input": "AI 生成功能集体罢工，日志里有 401 字样（联调环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 15.0,
+      "total_ms": 77.9
+    },
+    {
+      "id": "chat_019",
+      "input": "今天天气不错，心情很好求帮助",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.6,
+      "total_ms": 66.1
+    },
+    {
+      "id": "gen_007",
+      "input": "帮我写一个 Kotlin Repository 实现类，急",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 26.0,
+      "total_ms": 92.1
+    },
+    {
+      "id": "diag_025",
+      "input": "新装机的用户连不上网，抓包看 TLS 握手那一步就被服务端断了",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.2,
+      "total_ms": 135.7
+    },
+    {
+      "id": "chat_000",
+      "input": "你好，你是谁呀",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 17.6,
+      "total_ms": 87.8
+    },
+    {
+      "id": "qa_027",
+      "input": "讲一下 manifest 的注册协议，急",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 36.3,
+      "total_ms": 95.7
+    },
+    {
+      "id": "diag_074",
+      "input": "下单时那条记录写不进去，提示主键重复，帮忙看看如何排查？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.1,
+      "total_ms": 84.6
+    },
+    {
+      "id": "diag_058",
+      "input": "下游接口经常等不到响应，客户端等够 5 秒就把连接挂断了怎么办？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.7,
+      "total_ms": 87.9
+    },
+    {
+      "id": "gen_002",
+      "input": "帮我写一个 Kotlin Repository 实现类（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 29.3,
+      "total_ms": 95.7
+    },
+    {
+      "id": "diag_017",
+      "input": "HTTPS 握手失败，报 SSLException（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 33.1,
+      "total_ms": 89.4
+    },
+    {
+      "id": "diag_049",
+      "input": "接口读取超时，Read timed out如何排查？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 37.2,
+      "total_ms": 97.3
+    },
+    {
+      "id": "diag_092",
+      "input": "SSE 连接断开，回答中断（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 48.7,
+      "total_ms": 127.4
+    },
+    {
+      "id": "diag_075",
+      "input": "Android 模拟器黑屏了",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 27.0,
+      "total_ms": 80.8
+    },
+    {
+      "id": "qa_021",
+      "input": "讲一下 manifest 的注册协议（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 35.3,
+      "total_ms": 95.0
+    },
+    {
+      "id": "diag_020",
+      "input": "灰度用户反馈 HTTPS 请求全部失败，日志：javax.net.ssl.SSLHandshakeException: handshake_failure",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.4,
+      "total_ms": 82.9
+    },
+    {
+      "id": "diag_096",
+      "input": "回答生成到一半就停了，抓包看是 text/event-stream 的连接被服务端断开（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 15.0,
+      "total_ms": 72.7
+    },
+    {
+      "id": "diag_031",
+      "input": "连接超时，日志提示 Connection refused（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 25.0,
+      "total_ms": 85.8
+    },
+    {
+      "id": "qa_017",
+      "input": "协议文档中权限相关的配置说明，急",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 34.1,
+      "total_ms": 124.7
+    },
+    {
+      "id": "diag_117",
+      "input": "AI 生成功能集体罢工，日志里有 401 字样（线上环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 15.8,
+      "total_ms": 79.2
+    },
+    {
+      "id": "diag_011",
+      "input": "调用窗口接口后服务退出了，日志末尾一大段堆栈指向 WindowService.java:88（联调环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.7,
+      "total_ms": 82.1
+    },
+    {
+      "id": "diag_067",
+      "input": "订单写入失败，日志：java.sql.SQLException: Duplicate entry 'xxx' for key 'PRIMARY'（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 39.4,
+      "total_ms": 92.6
+    },
+    {
+      "id": "diag_088",
+      "input": "模拟器能起来但画面全黑，logcat 里 system_server 一切正常怎么办？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 43.1,
+      "total_ms": 102.1
+    },
+    {
+      "id": "diag_091",
+      "input": "SSE 连接断开，回答中断（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.2,
+      "total_ms": 86.2
+    },
+    {
+      "id": "diag_024",
+      "input": "灰度用户反馈 HTTPS 请求全部失败，日志：javax.net.ssl.SSLHandshakeException: handshake_failure如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.4,
+      "total_ms": 91.0
+    },
+    {
+      "id": "diag_097",
+      "input": "回答生成到一半就停了，抓包看是 text/event-stream 的连接被服务端断开（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSE连接"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 16.6,
+      "total_ms": 81.5
+    },
+    {
+      "id": "chat_002",
+      "input": "你好，你是谁呀（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.5,
+      "total_ms": 84.8
+    },
+    {
+      "id": "chat_010",
+      "input": "今天天气不错，心情很好",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 26.9,
+      "total_ms": 86.2
+    },
+    {
+      "id": "diag_086",
+      "input": "模拟器能起来但画面全黑，logcat 里 system_server 一切正常（联调环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.7,
+      "total_ms": 90.3
+    },
+    {
+      "id": "chat_001",
+      "input": "你好，你是谁呀（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.6,
+      "total_ms": 66.1
+    },
+    {
+      "id": "diag_039",
+      "input": "服务间调用不通，日志里有 java.net.ConnectException: Connection refused如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 35.8,
+      "total_ms": 98.9
+    },
+    {
+      "id": "gen_018",
+      "input": "用 Compose 生成一个列表页代码（昨天开始出现）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 39.8,
+      "total_ms": 97.9
+    },
+    {
+      "id": "diag_087",
+      "input": "模拟器能起来但画面全黑，logcat 里 system_server 一切正常（线上环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "黑屏"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 23.8,
+      "total_ms": 91.4
+    },
+    {
+      "id": "chat_005",
+      "input": "你好，你是谁呀灰度期间出现的",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.8,
+      "total_ms": 83.1
+    },
+    {
+      "id": "diag_040",
+      "input": "A 机房调 B 机房突然全不通了，telnet 端口直接被拒",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 25.4,
+      "total_ms": 90.6
+    },
+    {
+      "id": "diag_001",
+      "input": "调用 窗口 接口报 NullPointerException，帮忙排查一下（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.3,
+      "total_ms": 81.7
+    },
+    {
+      "id": "diag_071",
+      "input": "下单时那条记录写不进去，提示主键重复，帮忙看看（联调环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.4,
+      "total_ms": 91.8
+    },
+    {
+      "id": "gen_000",
+      "input": "帮我写一个 Kotlin Repository 实现类",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 25.3,
+      "total_ms": 83.8
+    },
+    {
+      "id": "diag_114",
+      "input": "生成功能时好时坏，日志显示 HTTP 401 from api.deepseek.com如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 15.2,
+      "total_ms": 69.5
+    },
+    {
+      "id": "diag_056",
+      "input": "下游接口经常等不到响应，客户端等够 5 秒就把连接挂断了（联调环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 37.7,
+      "total_ms": 100.4
+    },
+    {
+      "id": "diag_107",
+      "input": "DeepSeek API 返回 401（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 23.9,
+      "total_ms": 548.5
+    },
+    {
+      "id": "chat_011",
+      "input": "今天天气不错，心情很好（联调环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.2,
+      "total_ms": 114.1
+    },
+    {
+      "id": "gen_016",
+      "input": "用 Compose 生成一个列表页代码（复现步骤见附件）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 36.7,
+      "total_ms": 96.7
+    },
+    {
+      "id": "diag_050",
+      "input": "下游接口偶发拿不到响应，日志：java.net.SocketTimeoutException: Read timed out",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 42.5,
+      "total_ms": 104.8
+    },
+    {
+      "id": "qa_023",
+      "input": "讲一下 manifest 的注册协议怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 56.9,
+      "total_ms": 118.9
+    },
+    {
+      "id": "chat_017",
+      "input": "今天天气不错，心情很好，急",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.3,
+      "total_ms": 72.4
+    },
+    {
+      "id": "gen_004",
+      "input": "帮我写一个 Kotlin Repository 实现类如何排查？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 15.1,
+      "total_ms": 74.4
+    },
+    {
+      "id": "qa_009",
+      "input": "tab manifest 里注册路由的协议字段说明求帮助",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 57.8,
+      "total_ms": 127.3
+    },
+    {
+      "id": "diag_059",
+      "input": "下游接口经常等不到响应，客户端等够 5 秒就把连接挂断了如何排查？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.4,
+      "total_ms": 81.7
+    },
+    {
+      "id": "diag_055",
+      "input": "下游接口经常等不到响应，客户端等够 5 秒就把连接挂断了",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.0,
+      "total_ms": 90.6
+    },
+    {
+      "id": "diag_023",
+      "input": "灰度用户反馈 HTTPS 请求全部失败，日志：javax.net.ssl.SSLHandshakeException: handshake_failure怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 26.4,
+      "total_ms": 96.2
+    },
+    {
+      "id": "diag_007",
+      "input": "用户反馈保存草稿失败，日志贴出来是一段 Caused by: java.lang.NullPointerException 的堆栈（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 25.1,
+      "total_ms": 88.6
+    },
+    {
+      "id": "diag_008",
+      "input": "用户反馈保存草稿失败，日志贴出来是一段 Caused by: java.lang.NullPointerException 的堆栈怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 25.7,
+      "total_ms": 87.1
+    },
+    {
+      "id": "diag_108",
+      "input": "DeepSeek API 返回 401怎么办？",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "DeepSeek API Error"
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": null,
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": false,
+      "tool_ok": false,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 5.6,
+      "total_ms": 67.0
+    },
+    {
+      "id": "gen_001",
+      "input": "帮我写一个 Kotlin Repository 实现类（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 14.2,
+      "total_ms": 80.4
+    },
+    {
+      "id": "diag_022",
+      "input": "灰度用户反馈 HTTPS 请求全部失败，日志：javax.net.ssl.SSLHandshakeException: handshake_failure（线上环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 27.5,
+      "total_ms": 94.7
+    },
+    {
+      "id": "qa_019",
+      "input": "协议文档中权限相关的配置说明求帮助",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "PROTOCOL_QA",
+        "tool": "search",
+        "tool_status": "done"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 39.2,
+      "total_ms": 102.2
+    },
+    {
+      "id": "gen_023",
+      "input": "实现一个分页加载的 Repository怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 34.0,
+      "total_ms": 94.0
+    },
+    {
+      "id": "diag_026",
+      "input": "新装机的用户连不上网，抓包看 TLS 握手那一步就被服务端断了（联调环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 25.4,
+      "total_ms": 85.1
+    },
+    {
+      "id": "chat_008",
+      "input": "你好，你是谁呀（昨天开始出现）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.2,
+      "total_ms": 65.8
+    },
+    {
+      "id": "diag_035",
+      "input": "服务间调用不通，日志里有 java.net.ConnectException: Connection refused",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "ConnectTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 46.9,
+      "total_ms": 106.2
+    },
+    {
+      "id": "diag_057",
+      "input": "下游接口经常等不到响应，客户端等够 5 秒就把连接挂断了（线上环境）",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SocketTimeout"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 25.0,
+      "total_ms": 86.3
+    },
+    {
+      "id": "diag_062",
+      "input": "执行 SQL 报 SQLException 死锁（线上环境）",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 23.6,
+      "total_ms": 87.0
+    },
+    {
+      "id": "diag_070",
+      "input": "下单时那条记录写不进去，提示主键重复，帮忙看看",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SQLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 24.0,
+      "total_ms": 104.3
+    },
+    {
+      "id": "chat_009",
+      "input": "你好，你是谁呀求帮助",
+      "difficulty": "easy",
+      "expected": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "GENERAL_CHAT",
+        "tool": "none",
+        "tool_status": null
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 5.3,
+      "total_ms": 69.2
+    },
+    {
+      "id": "diag_006",
+      "input": "用户反馈保存草稿失败，日志贴出来是一段 Caused by: java.lang.NullPointerException 的堆栈（联调环境）",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "NullPointerException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 23.7,
+      "total_ms": 83.7
+    },
+    {
+      "id": "diag_028",
+      "input": "新装机的用户连不上网，抓包看 TLS 握手那一步就被服务端断了怎么办？",
+      "difficulty": "hard",
+      "expected": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "root_cause": "SSLException"
+      },
+      "actual": {
+        "intent": "ERROR_DIAGNOSIS",
+        "tool": "analyze_log",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": false,
+      "pass": false,
+      "first_event_ms": 52.0,
+      "total_ms": 119.3
+    },
+    {
+      "id": "gen_013",
+      "input": "用 Compose 生成一个列表页代码怎么办？",
+      "difficulty": "normal",
+      "expected": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "root_cause": null
+      },
+      "actual": {
+        "intent": "CODE_GENERATION",
+        "tool": "generate",
+        "tool_status": "failed"
+      },
+      "llm_error": true,
+      "intent_ok": true,
+      "tool_ok": true,
+      "root_ok": null,
+      "pass": true,
+      "first_event_ms": 14.7,
+      "total_ms": 276.5
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+ "samples": 48,
+ "errors": 0,
+ "error_rate": 0.0,
+ "throughput_reqs": 0.0,
+ "avg_ms": 4969.6,
+ "min_ms": 709.0,
+ "p50_ms": 4410.0,
+ "p90_ms": 9054.0,
+ "p95_ms": 13154.0,
+ "p99_ms": 16926.0,
+ "max_ms": 16926.0
+}

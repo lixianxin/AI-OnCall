@@ -146,3 +146,23 @@ vite.config.ts.timestamp-*
 docs/server-api-test-report-2026-05-31.md
 
 mydocs/
+
+# Java/Gradle 构建产物（勿入库；Windows 本地缓存会污染 CI/Linux）
+ai-service/.gradle/
+ai-service/build/
+**/.gradle/
+**/build/
+
+
+# 本地属性（SDK 路径等，勿入库）
+local.properties
+
+# Python
+**/__pycache__/
+*.pyc
+
+# IDE
+.idea/
+
+# Java/Eclipse style build output
+ai-service/bin/

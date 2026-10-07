@@ -49,7 +49,7 @@ public class ChatController {
             log.error("Failed to parse ChatRequest: rawBody={}, error={}", rawBody, e.getMessage());
             return Flux.just(ServerSentEvent.<String>builder()
                     .event("error")
-                    .data("{\"type\":\"error\",\"code\":\"PARSE_ERROR\",\"delta\":\"闁荤姴娲弨閬嶆儑閹殿喗鍠嗛柨婵嗘閳ь剝濮ゅ鍕綇椤愩儛? " + e.getMessage() + "\"}")
+                    .data("{\"type\":\"error\",\"code\":\"PARSE_ERROR\",\"delta\":\"请求解析失败: " + e.getMessage() + "\"}")
                     .build());
         }
         String conversationId = request.conversationId();
@@ -81,13 +81,17 @@ public class ChatController {
                 .doOnComplete(() -> log.info("SSE stream complete: convId={}", conversationId))
                 .doOnError(e -> log.error("SSE stream error: convId={}", conversationId, e));
 
-        // Heartbeat: SSE comment every 15s to keep connection alive
+        // Heartbeat: SSE comment every 15s to keep connection alive while main stream is running.
+        // takeUntilOther(mainStream): heartbeat stops when main stream completes/errors, so the merged
+        // Flux terminates and the SSE connection closes after the terminal event (spec-compliant EOF;
+        // previously the infinite heartbeat kept the connection open forever after `done`).
         Flux<ServerSentEvent<String>> heartbeat = Flux
                 .interval(Duration.ofMillis(HEARTBEAT_INTERVAL_MS))
                 .map(i -> ServerSentEvent.<String>builder()
                         .comment("keepalive")
                         .build())
-                .doOnNext(h -> log.trace("SSE heartbeat: convId={}", conversationId));
+                .doOnNext(h -> log.trace("SSE heartbeat: convId={}", conversationId))
+                .takeUntilOther(mainStream);
 
         // Assemble and handle errors gracefully
         return Flux.merge(mainStream, heartbeat)

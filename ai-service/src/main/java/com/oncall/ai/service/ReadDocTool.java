@@ -3,7 +3,17 @@ package com.oncall.ai.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ReadDocTool implements ToolExecutor {
+import org.springframework.stereotype.Component;
+
+@Component
+public class ReadDocTool implements Tool {
+
+    @Override
+    public ToolSpec spec() {
+        // 文档读取：轻量、高频，超时最短、限流最宽
+        return new ToolSpec("read", "按文档路径读取协议文档片段",
+                2000, 1, 40, java.util.List.of("query"));
+    }
 
     @Override
     public ToolResult execute(ToolContext context) {

@@ -3,6 +3,7 @@ package com.oncall.ai.service;
 import com.oncall.ai.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
@@ -32,21 +33,34 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
     private final DocumentStore documentStore;
     private final DeepSeekClient deepSeekClient;
     private final KnowledgeMetrics knowledgeMetrics;
+    private final ToolExecutor toolExecutor;   // Tool Runtime 治理层
+    private final SemanticFallbackRouter semanticFallbackRouter; // Semantic Fallback（实验变量）
 
     public DocumentAgentOrchestrator(
             ConversationStore conversationStore,
             DocumentStore documentStore,
             DeepSeekClient deepSeekClient,
-            KnowledgeMetrics knowledgeMetrics) {
+            KnowledgeMetrics knowledgeMetrics,
+            ToolExecutor toolExecutor,
+            SemanticFallbackRouter semanticFallbackRouter) {
         this.conversationStore = conversationStore;
         this.documentStore = documentStore;
         this.deepSeekClient = deepSeekClient;
         this.knowledgeMetrics = knowledgeMetrics;
+        this.toolExecutor = toolExecutor;
+        this.semanticFallbackRouter = semanticFallbackRouter;
     }
 
     @Override
     public Flux<ChatEvent> stream(String conversationId, String message) {
-        log.info("DocumentAgent stream start: convId={}, message={}", conversationId, message);
+        // 兜底补 trace_id：TraceIdFilter 在请求线程已写 MDC，
+        // 但响应式链路可能切线程，入口补一次保证下游同步段（Tool 调用）可见
+        String traceId = MDC.get("traceId");
+        if (traceId == null || traceId.isBlank()) {
+            traceId = UUID.randomUUID().toString().replace("-", "");
+            MDC.put("traceId", traceId);
+        }
+        log.info("DocumentAgent stream start: convId={}, traceId={}, message={}", conversationId, traceId, message);
         if (message == null || message.isBlank()) {
             return Flux.just(new ErrorEvent("EMPTY_MESSAGE", "\u6d88\u606f\u4e0d\u80fd\u4e3a\u7a7a"));
         }
@@ -59,14 +73,23 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
         String intent = detectIntent(message);
         updatedConv.setLastIntent(intent);
 
-        // 3. Execute tool
+                // 3. Execute tool (skip knowledge search for GENERAL_CHAT)
         String toolName = intentToTool(intent);
-        ToolExecutor executor = ToolExecutorFactory.create(toolName);
-        ToolContext toolContext = new ToolContext(message, conversationId, documentStore);
+        ToolResult toolResult;
+        long startMs;
+        long elapsedMs;
 
-        long startMs = System.currentTimeMillis();
-        ToolResult toolResult = executor.execute(toolContext);
-        long elapsedMs = System.currentTimeMillis() - startMs;
+        if ("none".equals(toolName)) {
+            startMs = System.currentTimeMillis();
+            toolResult = new ToolResult("none", "done", "", java.util.List.of(), "", 0.0, 0.0);
+            elapsedMs = System.currentTimeMillis() - startMs;
+        } else {
+            ToolContext toolContext = new ToolContext(message, conversationId, documentStore);
+            startMs = System.currentTimeMillis();
+            // 走 Tool Runtime 治理层：参数校验 → 限流 → 超时 → 重试 → 降级
+            toolResult = toolExecutor.execute(toolName, toolContext);
+            elapsedMs = System.currentTimeMillis() - startMs;
+        }
 
         // ====== RAG DEBUG LOGGING ======
         if (log.isDebugEnabled() && ("search".equals(toolName) || "analyze_log".equals(toolName))) {
@@ -86,43 +109,39 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
             log.debug("============================");
         }
 
-        // Metrics tracking
-        // Semantic relevance: check if query keywords actually appear in top documents
-        // Skip BM25 for queries with too few meaningful Chinese chars (greetings, short questions)
-        String chineseOnly = message.replaceAll("[^\\u4e00-\\u9fff]", "");
-        boolean tooShort = chineseOnly.length() <= 3;
-        boolean rawHit = !tooShort && toolResult.getConfidence() >= 0.5 && !toolResult.getSources().isEmpty();
-        boolean keywordOk = rawHit && hasKeywordOverlap(message, documentStore.searchWithScores(message, 3));
-        boolean scoreOk = rawHit && toolResult.getBm25MaxScore() >= 3.0;
-        boolean hit = keywordOk || scoreOk;
-        if (tooShort) {
-            log.debug("Query too short ({} Chinese chars), forcing knowledge miss: '{}'", chineseOnly.length(), message);
+        // Build validResults: single source of truth for hit and sourceItems
+        double MIN_SCORE = 0.5;
+        List<SearchResult> validResults;
+        if ("none".equals(toolName)) {
+            validResults = List.of();
+        } else {
+            validResults = documentStore.searchWithScores(message, TOP_K).stream()
+                .filter(r -> r.getScore() >= MIN_SCORE)
+                .collect(Collectors.toList());
         }
-        // Always use real BM25 score for metrics; hit flag controls only prompt strategy
-        double topScore = toolResult.getBm25MaxScore();
+
+        // Hit determination from validResults (single data source)
+        String chineseOnly = message.replaceAll("[^\u4e00-\u9fff]", "");
+        boolean tooShort = chineseOnly.length() <= 3;
+        boolean hit = !tooShort && !validResults.isEmpty();
+        double topScore = validResults.isEmpty() ? 0.0 : validResults.get(0).getScore();
+        if (tooShort) {
+            log.debug("Query too short ({} Chinese chars), forcing miss: '{}'", chineseOnly.length(), message);
+        }
         knowledgeMetrics.recordSearch(hit, elapsedMs, topScore);
 
-        // Build SourcesEvent with real BM25 scores
-        List<SourcesEvent.SourceItem> sourceItems;
-        if ("search".equals(toolName) || "analyze_log".equals(toolName)) {
-            List<SearchResult> searchResults = documentStore.searchWithScores(message, TOP_K);
-            sourceItems = searchResults.stream()
-                .filter(r -> r.getScore() >= 0.5)
-                .map(r -> {
-                    DocumentChunk chunk = r.getChunk();
-                    String snippet = chunk.getContent();
-                    if (snippet.length() > 120) snippet = snippet.substring(0, 120) + "...";
-                    String fileName = chunk.getSource().contains(" > ")
-                        ? chunk.getSource().split(" > ")[0]
-                        : chunk.getSource();
-                    return new SourcesEvent.SourceItem(fileName, chunk.getSource(), r.getScore(), snippet);
-                })
-                .collect(Collectors.toList());
-        } else {
-            sourceItems = toolResult.getSources().stream()
-                .map(src -> new SourcesEvent.SourceItem(src, "", 0.0, ""))
-                .collect(Collectors.toList());
-        }
+        // SourcesEvent from validResults (same data as hit)
+        List<SourcesEvent.SourceItem> sourceItems = validResults.stream()
+            .map(r -> {
+                DocumentChunk chunk = r.getChunk();
+                String snippet = chunk.getContent();
+                if (snippet.length() > 120) snippet = snippet.substring(0, 120) + "...";
+                String fileName = chunk.getSource().contains(" > ")
+                    ? chunk.getSource().split(" > ")[0]
+                    : chunk.getSource();
+                return new SourcesEvent.SourceItem(fileName, chunk.getSource(), r.getScore(), snippet);
+            })
+            .collect(Collectors.toList());
 
         // Update Working Memory
         updatedConv.addTool(toolName);
@@ -170,11 +189,18 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
                 .doOnNext(token -> fullReplyRef.get().append(token))
                 .map(ContentEvent::new);
 
-        // 4. SSE event stream: Intent -> Tool(done+summary) -> Sources(with scores) -> Content -> Done
+        // 4. SSE event stream: Intent -> Tool(real status: done/rate_limited/timeout/fallback) -> Sources -> Content -> Done
+        // Skip ToolEvent for "none" tool, skip SourcesEvent when empty
+        Flux<ChatEvent> toolFlux = "none".equals(toolName)
+                ? Flux.empty()
+                : Flux.just(new ToolEvent(toolName, toolResult.getStatus(), toolResult.getSummary()));
+        Flux<ChatEvent> sourceFlux = sourceItems.isEmpty()
+                ? Flux.empty()
+                : Flux.just(new SourcesEvent(sourceItems));
         Flux<ChatEvent> stream = Flux.concat(
                 Flux.just(new IntentEvent(intent)),
-                Flux.just(new ToolEvent(toolName, "done", toolResult.getSummary())),
-                Flux.just(new SourcesEvent(sourceItems)),
+                toolFlux,
+                sourceFlux,
                 contentFlux,
                 Flux.just(new DoneEvent(UUID.randomUUID().toString()))
         );
@@ -222,7 +248,7 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
         return switch (intent) {
             case IntentEvent.ERROR_DIAGNOSIS -> ToolEvent.ANALYZE_LOG;
             case IntentEvent.CODE_GENERATION -> ToolEvent.GENERATE;
-            case IntentEvent.GENERAL_CHAT -> ToolEvent.SEARCH;
+            case IntentEvent.GENERAL_CHAT -> "none";
             default -> ToolEvent.SEARCH;
         };
     }
@@ -276,6 +302,14 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
                 || lower.contains("\u6743\u9650") || lower.contains("\u8def\u7531") || lower.contains("\u914d\u7f6e")
                 || lower.contains("manifest")) {
             return IntentEvent.PROTOCOL_QA;
+        }
+        // Keyword Fast Path miss → Semantic Fallback（受控实验变量，2026-09-08）：
+        // 仅在关键词未命中时启用，不改关键词优先级；低于阈值返回 null → GENERAL_CHAT。
+        String semantic = semanticFallbackRouter.decide(message);
+        if (semantic != null) {
+            log.info("Semantic fallback hit: traceId={}, intent={}, message={}",
+                    MDC.get("traceId"), semantic, message);
+            return semantic;
         }
         return IntentEvent.GENERAL_CHAT;
     }

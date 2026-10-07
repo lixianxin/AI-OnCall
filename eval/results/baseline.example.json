@@ -1,0 +1,16 @@
+{
+  "dataset": "diagnosis_v1",
+  "samples": 200,
+  "tool_selection_accuracy": 80.0,
+  "root_cause_accuracy": 79.5,
+  "intent_accuracy": 85.0,
+  "diagnosis_pass_rate": 70.0,
+  "avg_latency_ms": 4800,
+  "p95_latency_ms": 7000,
+  "p99_latency_ms": 7600,
+  "first_event_avg_ms": 280,
+  "first_event_p99_ms": 300,
+  "fallback_rate": 0.05,
+  "tool_retry_rate": 0.08,
+  "token_usage": {}
+}

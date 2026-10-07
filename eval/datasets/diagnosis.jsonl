@@ -1,0 +1,3 @@
+{"query": "Pod CrashLoopBackOff 反复重启", "expected_tool": "analyze_log", "expected_root_cause": "容器启动命令配置错误"}
+{"query": "调用接口报 NullPointerException", "expected_tool": "analyze_log", "expected_root_cause": "空指针"}
+{"query": "服务请求超时 timeout", "expected_tool": "analyze_log", "expected_root_cause": "下游依赖超时"}

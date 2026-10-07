@@ -1,0 +1,19 @@
+services:
+  ai-service:
+    build: ./ai-service
+    container_name: ai-oncall-ai-service
+    ports:
+      - "8081:8081"
+    environment:
+      # 生产请通过 .env / CI secret 注入，不要提交真实 key
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?请在 .env 中设置 DEEPSEEK_API_KEY}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+    volumes:
+      # 知识库文档可热更新，不必重建镜像
+      - ./ai-service/docs:/app/docs:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped

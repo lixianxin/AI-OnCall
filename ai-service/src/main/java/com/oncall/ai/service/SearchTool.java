@@ -3,9 +3,19 @@ package com.oncall.ai.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class SearchTool implements ToolExecutor {
+import org.springframework.stereotype.Component;
+
+@Component
+public class SearchTool implements Tool {
 
     private static final int TOP_K = 5;
+
+    @Override
+    public ToolSpec spec() {
+        // 知识库检索：可接受较短超时，中频调用
+        return new ToolSpec("search", "知识库语义检索（BM25 + 向量）",
+                3000, 1, 30, java.util.List.of("query"));
+    }
 
     /**
      * Compute KB match confidence 0.0 ~ 1.0 based on BM25 scores.

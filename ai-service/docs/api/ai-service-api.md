@@ -37,7 +37,7 @@ Accept: text/event-stream
 | 参数 | 环境变量 | 默认值 | 说明 |
 |------|---------|--------|------|
 | server.port | — | 8081 | 服务端口 |
-| deepseek.api-key | — | sk-207987ffc28548b497c903c5371ae8bd | DeepSeek API Key |
+| deepseek.api-key | DEEPSEEK_API_KEY | ${DEEPSEEK_API_KEY} | DeepSeek API Key（通过环境变量注入，勿写死） |
 | deepseek.base-url | — | https://api.deepseek.com | API 地址 |
 | deepseek.model | — | deepseek-chat | 模型名 |
 | oncall.docs-path | ONCALL_DOCS_PATH | ../docs | 知识库目录 |

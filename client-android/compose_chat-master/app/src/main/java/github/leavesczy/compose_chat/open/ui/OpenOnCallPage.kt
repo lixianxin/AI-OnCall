@@ -513,8 +513,8 @@ fun OpenOnCallPage(
                         }
                     )
 
-                    is OnCallMessageUi.Tool -> ToolMessageCard(message = message)
-                                    is OnCallMessageUi.SourceCard -> SourceMessageCard(message = message)
+                    is OnCallMessageUi.Tool, is OnCallMessageUi.SourceCard -> { /* hidden */ }
+
                 }
             }
         }
@@ -1040,7 +1040,7 @@ private fun AssistantMessageBubble(
 
 @Composable
 private fun SourceMessageCard(message: OnCallMessageUi.SourceCard) {
-    val relevancePct = (message.relevance * 100).toInt()
+    val relevanceDisplay = "BM25: " + String.format("%.2f", message.relevance)
     Row(
         modifier = Modifier
             .padding(start = 52.dp, top = 2.dp, bottom = 2.dp)
@@ -1068,7 +1068,7 @@ private fun SourceMessageCard(message: OnCallMessageUi.SourceCard) {
             )
             if (message.relevance > 0) {
                 Text(
-                    text = "匹配度 ${relevancePct}%",
+                    text = "匹配度 ${relevanceDisplay}",
                     fontSize = 10.sp,
                     lineHeight = 12.sp,
                     color = Color(color = 0xFF4ADE80)
@@ -1186,14 +1186,7 @@ private fun handleStreamEvent(
             messages[assistantIndex] = old.copy(content = old.content + event.text)
         }
 
-        is OnCallStreamEvent.Tool -> {
-            if (event.tool.status.isVisibleToolStatus()) {
-                messages += OnCallMessageUi.Tool(
-                    id = UUID.randomUUID().toString(),
-                    tool = event.tool
-                )
-            }
-        }
+        is OnCallStreamEvent.Tool -> { /* hidden */ }
 
         is OnCallStreamEvent.Done -> {
             val old = messages[assistantIndex] as OnCallMessageUi.Assistant
@@ -1218,32 +1211,8 @@ private fun handleStreamEvent(
             // 未知事件暂不打断主流程。服务端扩展新事件后可在这里补充新的展示卡片。
         }
 
-        is OnCallStreamEvent.Intent -> {
-            messages += OnCallMessageUi.Tool(
-                id = UUID.randomUUID().toString(),
-                tool = OnCallToolEvent(
-                    name = event.intent,
-                    status = "done",
-                    summary = when (event.intent) {
-                        "PROTOCOL_QA" -> "协议问答"
-                        "ERROR_DIAGNOSIS" -> "错误诊断"
-                        "CODE_GENERATION" -> "代码生成"
-                        else -> "通用助手"
-                    }
-                )
-            )
-        }
-
-        is OnCallStreamEvent.Sources -> {
-            event.items.forEach { item ->
-                messages += OnCallMessageUi.SourceCard(
-                    id = UUID.randomUUID().toString(),
-                    file = item.file,
-                    relevance = item.relevance,
-                    snippet = item.snippet
-                )
-            }
-        }
+        is OnCallStreamEvent.Intent -> { /* hidden */ }
+        is OnCallStreamEvent.Sources -> { /* sources shown in response text */ }
     }
 }
 

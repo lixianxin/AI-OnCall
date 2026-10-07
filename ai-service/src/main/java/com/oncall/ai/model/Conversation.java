@@ -107,12 +107,12 @@ public class Conversation {
 
         // Layer 2: Summary
         if (!summary.isEmpty()) {
-            sb.append("銆愬璇濇憳瑕併€慭n").append(summary).append("\n\n");
+            sb.append("【对话摘要】\n").append(summary).append("\n\n");
         }
 
         // Layer 3: Recent tools
         if (!recentTools.isEmpty()) {
-            sb.append("銆愭渶杩戜娇鐢ㄥ伐鍏枫€慭n");
+            sb.append("【最近使用工具】\n");
             for (String tool : recentTools.subList(Math.max(0, recentTools.size() - 5), recentTools.size())) {
                 sb.append("- ").append(tool).append("\n");
             }
@@ -121,7 +121,7 @@ public class Conversation {
 
         // Layer 3: Recent sources
         if (!recentSources.isEmpty()) {
-            sb.append("銆愭渶杩戝紩鐢ㄦ枃妗ｃ€慭n");
+            sb.append("【最近引用文档】\n");
             for (String src : recentSources.subList(Math.max(0, recentSources.size() - 5), recentSources.size())) {
                 sb.append("- ").append(src).append("\n");
             }
@@ -131,9 +131,9 @@ public class Conversation {
         // Layer 1: Recent conversation history (last 5 exchanges)
         List<Message> recent = getRecentMessages(10);
         if (!recent.isEmpty()) {
-            sb.append("銆愭渶杩戝璇濄€慭n");
+            sb.append("【最近对话】\n");
             for (Message msg : recent) {
-                String role = msg.role() == Role.USER ? "鐢ㄦ埛" : "AI";
+                String role = msg.role() == Role.USER ? "用户" : "AI";
                 sb.append(role).append(": ").append(msg.content()).append("\n");
             }
             sb.append("\n");

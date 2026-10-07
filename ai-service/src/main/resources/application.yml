@@ -1,4 +1,4 @@
-spring:
+﻿spring:
   application:
     name: ai-service
 
@@ -6,19 +6,22 @@ server:
   port: 8081
 
 logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [traceId=%X{traceId:-}] - %msg%n"
   level:
     com.oncall.ai: DEBUG
     reactor.netty: INFO
 
 deepseek:
-  api-key: sk-207987ffc28548b497c903c5371ae8bd
-  base-url: https://api.deepseek.com
-  model: deepseek-chat
+  # 优先读环境变量 DEEPSEEK_API_KEY（生产/容器）；默认值为占位符，本地开发请通过环境变量注入
+  api-key: ${DEEPSEEK_API_KEY:replace-me}
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+  model: ${DEEPSEEK_MODEL:deepseek-chat}
 
 oncall:
-  docs-path: ${ONCALL_DOCS_PATH:../docs}
-  # 远端知识库地址。配置后启动时自动下载到 docs-path 目录，覆盖本地文件。
-  # 支持两种模式：
-  #   1. 单个 .md 文件 URL：直接下载该文件
-  #   2. Manifest URL：返回文本，每行一个 .md 文件 URL（如 GitLab Raw 目录索引）
+  docs-path: ${ONCALL_DOCS_PATH:./docs}
+  # 杩滅鐭ヨ瘑搴撳湴鍧€銆傞厤缃悗鍚姩鏃惰嚜鍔ㄤ笅杞藉埌 docs-path 鐩綍锛岃鐩栨湰鍦版枃浠躲€?
+  # 鏀寔涓ょ妯″紡锛?
+  #   1. 鍗曚釜 .md 鏂囦欢 URL锛氱洿鎺ヤ笅杞借鏂囦欢
+  #   2. Manifest URL锛氳繑鍥炴枃鏈紝姣忚涓€涓?.md 鏂囦欢 URL锛堝 GitLab Raw 鐩綍绱㈠紩锛?
   docs-remote-url: ${ONCALL_DOCS_REMOTE_URL:}
