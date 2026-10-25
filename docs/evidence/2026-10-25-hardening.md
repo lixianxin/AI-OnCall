@@ -63,6 +63,8 @@
 ## 遗留与下一步
 
 1. **历史中的 key.jks**：确认 keystore 是否为真实签名密钥；是 → 作废重签 + 考虑 history rewrite；否 → 记录结论即可。
-2. **P1-2 回归**：启动服务跑 `eval/evaluate.py`，对照 `results/latest.json`（Intent 89.5 / Tool 88.33 / RootCause 95.0）确认无下降。
+2. **P1-2 回归**：✅ 路由链路已回归（2026-10-25，mock 上游离线跑通 200 条，Intent/Tool/No-Tool/Fallback 与基线逐位一致，
+   见 [2026-10-25-dedup-regression.md](2026-10-25-dedup-regression.md)）；
+   ⏳ 根因指标（95.0）判定口径含 LLM 生成内容，离线 mock 不可验证，待真实 API key 重跑全量确认。
 3. ~~**P1-3 注入测试**~~ ✅ 已完成（2026-10-25，[retry-injection 报告](2026-10-25-retry-injection.md)，含新缺陷发现与修复）。
 4. **P1-1 / P1-4**：干净环境部署验收、多档压测——见任务清单。

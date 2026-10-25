@@ -45,6 +45,11 @@ cd ai-service && ../gradlew bootRun
 
 # 2. 全量回归评测（200 条）
 python eval/evaluate.py --base http://localhost:8081 --save baseline
+# ⚠️ 节流提示：若上游响应极快（mock 上游 / 轻量模型），200 条会在几秒内跑完，
+# 触发工具限流（analyze_log 20/min、generate 10/min），产生 rate_limited 伪影
+# （Fallback 虚高、Root Cause 归零）。此场景务必加 --throttle 2.5（约 8.5 分钟）；
+# 真实 LLM（秒级响应）天然避开限流，无需节流。
+python eval/evaluate.py --base http://localhost:8081 --throttle 2.5 --save baseline_mock
 
 # 3. 改动后再跑，对比（快照命名建议带日期，如 v3_after_20261101）
 python eval/evaluate.py --base http://localhost:8081 --save v3_after
