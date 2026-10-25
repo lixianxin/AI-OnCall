@@ -169,10 +169,15 @@ public class DeepSeekClient {
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
                     String line;
+                    // [DONE] 哨兵：区分"上游正常结束"与"上游中途断开"。
+                    // 没有 [DONE] 就到达 EOF = 流被截断（注入测试 2026-10-25 发现：
+                    // 旧实现把截断当正常完成，客户端收到 done，半截答案被静默接受）
+                    boolean sawDone = false;
                     while ((line = reader.readLine()) != null) {
                         if (line.startsWith("data: ")) {
                             String data = line.substring(6).trim();
                             if ("[DONE]".equals(data)) {
+                                sawDone = true;
                                 break;
                             }
                             recordUsageIfPresent(data);
@@ -182,7 +187,14 @@ public class DeepSeekClient {
                             }
                         }
                     }
-                    sink.complete();
+                    if (sawDone) {
+                        sink.complete();
+                    } else {
+                        // EOF 且未收到 [DONE]：流被截断。已输出部分内容，不重试（避免重复文本），
+                        // 以 error 终态交给 SSE 错误事件机制
+                        log.error("[traceId={}] DeepSeek 流在上游被截断（EOF 未收到 [DONE]，已输出部分内容，不重试）", traceId);
+                        sink.error(new IllegalStateException("upstream stream truncated before [DONE]"));
+                    }
                 } catch (Exception e) {
                     log.error("[traceId={}] DeepSeek 流式读取中断（已输出部分内容，不重试）", traceId, e);
                     sink.error(e);

@@ -47,7 +47,11 @@
 - **两级保护**：最大尝试次数（`deepseek.retry.max-attempts`，默认 3 含首次）+ 总时间预算（`deepseek.retry.budget-ms`，默认 30s，所有重试共享）。
 - **与 ToolExecutor 的关系**：本重试只针对 LLM 上游调用；ToolExecutor 重试针对工具执行，链路每环节只经过一层重试，不叠加。
 - **配套**：`AgentMetrics.recordLlmRetry(reason)`（reason ∈ {429, 5xx, connect_error}，固定枚举无高基数风险），`/metrics` 输出 `llm_retries`；MDC traceId 跨线程传播（boundedElastic）。
-- **验证**：✅ 编译验证（见 §5）；⏳ 待 mock 上游故障注入验证三场景（部分 429 后恢复 / 持续 429 终态 / 连接失败重试）。
+- **验证**：✅ 编译验证（见 §5）；✅ mock 上游故障注入验证已完成（2026-10-25，见
+  [2026-10-25-retry-injection.md](2026-10-25-retry-injection.md)：429×2 恢复 / 持续 429 终态 /
+  连接失败重试 / 流式中途断开四场景全部按语义工作；
+  **注入还发现并修复了"截断流被静默当正常完成"缺陷**——EOF 未收到 [DONE] 时旧实现向客户端发 done，
+  现改为 error 终态不重试）。
 
 ## 5. 编译验证
 
@@ -60,5 +64,5 @@
 
 1. **历史中的 key.jks**：确认 keystore 是否为真实签名密钥；是 → 作废重签 + 考虑 history rewrite；否 → 记录结论即可。
 2. **P1-2 回归**：启动服务跑 `eval/evaluate.py`，对照 `results/latest.json`（Intent 89.5 / Tool 88.33 / RootCause 95.0）确认无下降。
-3. **P1-3 注入测试**：本地 mock 上游（固定 429×2 后 200 / 持续 429 / 连接拒绝）三场景，记录重试次数、成功率、延迟变化。
+3. ~~**P1-3 注入测试**~~ ✅ 已完成（2026-10-25，[retry-injection 报告](2026-10-25-retry-injection.md)，含新缺陷发现与修复）。
 4. **P1-1 / P1-4**：干净环境部署验收、多档压测——见任务清单。
