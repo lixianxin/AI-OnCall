@@ -58,6 +58,10 @@ public class DeepSeekClient {
     private final String apiKey;
     private final String baseUrl;
     private final String modelName;
+    /** 备用模型链路（分级降级第二级）：主链路重试耗尽后切换。为空 = 未配置备用链路 */
+    private final String backupBaseUrl;
+    private final String backupModelName;
+    private final String backupApiKey;
     private final HttpClient httpClient;
     private final AgentMetrics agentMetrics;
 
@@ -72,10 +76,17 @@ public class DeepSeekClient {
             @Value("${deepseek.retry.max-attempts:3}") int retryMaxAttempts,
             @Value("${deepseek.retry.budget-ms:30000}") long retryBudgetMs,
             @Value("${deepseek.retry.base-delay-ms:1000}") long retryBaseDelayMs,
+            @Value("${deepseek.backup.base-url:}") String backupBaseUrl,
+            @Value("${deepseek.backup.model:deepseek-chat}") String backupModelName,
+            @Value("${deepseek.backup.api-key:}") String backupApiKey,
             AgentMetrics agentMetrics) {
         this.apiKey = apiKey;
-        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        this.baseUrl = normalize(baseUrl);
         this.modelName = modelName;
+        this.backupBaseUrl = backupBaseUrl == null || backupBaseUrl.isBlank()
+                ? null : normalize(backupBaseUrl);
+        this.backupModelName = backupModelName;
+        this.backupApiKey = backupApiKey == null || backupApiKey.isBlank() ? apiKey : backupApiKey;
         this.retryMaxAttempts = Math.max(1, retryMaxAttempts);
         this.retryBudgetMs = retryBudgetMs;
         this.retryBaseDelayMs = Math.max(0, retryBaseDelayMs);
@@ -84,6 +95,12 @@ public class DeepSeekClient {
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
     }
+
+    private static String normalize(String url) {
+        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+    }
+
+    private boolean hasBackup() { return backupBaseUrl != null; }
 
     public Flux<String> stream(String systemPrompt, Conversation conversation, String userMessage, String detailData) {
         String prompt = buildPrompt(systemPrompt, conversation, userMessage, detailData);
@@ -103,7 +120,8 @@ public class DeepSeekClient {
                         MDC.setContextMap(mdcCtx);
                     }
                     try {
-                        executeWithRetry(sink, requestBody);
+                        executeWithRetry(sink, requestBody, baseUrl, apiKey, modelName,
+                                retryMaxAttempts, retryBudgetMs);
                     } finally {
                         MDC.clear();
                     }
@@ -113,12 +131,14 @@ public class DeepSeekClient {
     }
 
     /** 分级退避重试主循环。sink 只在确定不再重试时发出 error / complete。 */
-    private void executeWithRetry(reactor.core.publisher.FluxSink<String> sink, String requestBody) {
+    private void executeWithRetry(reactor.core.publisher.FluxSink<String> sink, String requestBody,
+                                  String baseUrl, String apiKey, String modelName,
+                                  int maxAttempts, long budgetMs) {
         String traceId = MDC.get("traceId") != null ? MDC.get("traceId") : "n/a";
-        long deadline = System.currentTimeMillis() + retryBudgetMs;
+        long deadline = System.currentTimeMillis() + budgetMs;
         long backoffMs = retryBaseDelayMs;
 
-        for (int attempt = 1; attempt <= retryMaxAttempts; attempt++) {
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(baseUrl + "/chat/completions"))
@@ -139,20 +159,22 @@ public class DeepSeekClient {
                     String errorBody = readAndClose(response);
                     long waitMs = Math.max(backoffMs, parseRetryAfterMs(response));
                     // 时间预算保护：等待后必须仍预留至少一次尝试的空间，否则视为预算耗尽
-                    boolean canRetry = attempt < retryMaxAttempts
+                    boolean canRetry = attempt < maxAttempts
                             && System.currentTimeMillis() + waitMs <= deadline;
                     if (canRetry) {
                         agentMetrics.recordLlmRetry(status == 429 ? "429" : "5xx");
                         log.warn("[traceId={}] DeepSeek 上游 {}（attempt {}/{}），{}ms 后重试{}",
-                                traceId, status, attempt, retryMaxAttempts, waitMs,
+                                traceId, status, attempt, maxAttempts, waitMs,
                                 waitMs == backoffMs ? "" : "（遵循 Retry-After）");
                         Thread.sleep(waitMs);
                         backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF_MS);
                         continue;
                     }
                     log.error("[traceId={}] DeepSeek 上游 {} 重试耗尽或超预算（attempt {}/{}）: {}",
-                            traceId, status, attempt, retryMaxAttempts, abbreviate(errorBody));
-                    sink.error(new RuntimeException("DeepSeek API returned " + status + ": " + errorBody));
+                            traceId, status, attempt, maxAttempts, abbreviate(errorBody));
+                    failOverToBackupOrError(sink, requestBody, traceId, baseUrl,
+                            status + " 重试耗尽",
+                            new RuntimeException("DeepSeek API returned " + status + ": " + errorBody));
                     return;
                 }
 
@@ -161,7 +183,10 @@ public class DeepSeekClient {
                     String errorBody = readAndClose(response);
                     log.error("[traceId={}] DeepSeek API error（终态，不重试）: status={}, body={}",
                             traceId, status, abbreviate(errorBody));
-                    sink.error(new RuntimeException("DeepSeek API returned " + status + ": " + errorBody));
+                    // 未产生任何输出 token；备用链路通常持有独立凭据/额度，值得一试
+                    failOverToBackupOrError(sink, requestBody, traceId, baseUrl,
+                            status + " 终态错误",
+                            new RuntimeException("DeepSeek API returned " + status + ": " + errorBody));
                     return;
                 }
 
@@ -211,12 +236,12 @@ public class DeepSeekClient {
             } catch (IOException e) {
                 // 请求未送达（连接超时 / 连接失败 / HttpTimeoutException）：
                 // 尚未产生任何输出 token，与 429/5xx 同属可重试类
-                boolean canRetry = attempt < retryMaxAttempts
+                boolean canRetry = attempt < maxAttempts
                         && System.currentTimeMillis() + backoffMs <= deadline;
                 if (canRetry) {
                     agentMetrics.recordLlmRetry("connect_error");
                     log.warn("[traceId={}] DeepSeek 连接失败（attempt {}/{}）：{}，{}ms 后重试",
-                            traceId, attempt, retryMaxAttempts, e.getMessage(), backoffMs);
+                            traceId, attempt, maxAttempts, e.getMessage(), backoffMs);
                     try {
                         Thread.sleep(backoffMs);
                     } catch (InterruptedException ie) {
@@ -228,13 +253,33 @@ public class DeepSeekClient {
                     continue;
                 }
                 log.error("[traceId={}] DeepSeek request failed（重试耗尽或超预算）", traceId, e);
-                sink.error(e);
+                failOverToBackupOrError(sink, requestBody, traceId, baseUrl,
+                        "连接失败重试耗尽", e);
                 return;
             } catch (Exception e) {
                 sink.error(e);
                 return;
             }
         }
+    }
+
+    /**
+     * 分级降级第二级：主链路在任何输出之前失败（可重试耗尽 / 终态 4xx / 连接失败），
+     * 且配置了备用链路 → 切换备用模型重走一次（独立预算，最多 2 次尝试，防降级放大）；
+     * 已在备用链路上或未配置备用 → sink.error（降级第三级"部分诊断结论"由编排层兜底）。
+     */
+    private void failOverToBackupOrError(reactor.core.publisher.FluxSink<String> sink, String requestBody,
+                                         String traceId, String currentBaseUrl,
+                                         String reason, Exception cause) {
+        if (hasBackup() && !backupBaseUrl.equals(currentBaseUrl)) {
+            agentMetrics.recordLlmDegrade("backup_model");
+            log.warn("[traceId={}] LLM 主链路失败（{}），降级至备用模型 {} @ {}",
+                    traceId, reason, backupModelName, backupBaseUrl);
+            executeWithRetry(sink, requestBody, backupBaseUrl, backupApiKey, backupModelName,
+                    Math.min(retryMaxAttempts, 2), retryBudgetMs);
+            return;
+        }
+        sink.error(cause);
     }
 
     /** 读取错误响应体并关闭流 */

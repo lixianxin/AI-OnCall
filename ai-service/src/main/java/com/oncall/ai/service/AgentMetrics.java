@@ -35,6 +35,8 @@ public class AgentMetrics {
     private final Map<String, AtomicLong> tokenUsage = new ConcurrentHashMap<>();
     /** LLM 上游重试计数，key = 触发原因："429" / "5xx" / "connect_error" */
     private final Map<String, AtomicLong> llmRetries = new ConcurrentHashMap<>();
+    /** LLM 分级降级计数，key = 降级级别："backup_model" / "partial_diagnosis" */
+    private final Map<String, AtomicLong> llmDegrades = new ConcurrentHashMap<>();
 
     public void recordTool(String tool, String status, int retries, long latencyMs) {
         callCounts.computeIfAbsent(tool + ":" + status, k -> new AtomicLong()).incrementAndGet();
@@ -63,6 +65,15 @@ public class AgentMetrics {
     public void recordLlmRetry(String reason) {
         llmRetries.computeIfAbsent(reason, k -> new AtomicLong()).incrementAndGet();
         Metrics.counter("oncall.llm.retries", "reason", reason).increment();
+    }
+
+    /**
+     * 记录一次 LLM 分级降级触发（stage: backup_model / partial_diagnosis），
+     * 对应"重试 → 备用模型 → 返回部分诊断结论"降级链路的每一级。
+     */
+    public void recordLlmDegrade(String stage) {
+        llmDegrades.computeIfAbsent(stage, k -> new AtomicLong()).incrementAndGet();
+        Metrics.counter("oncall.llm.degrades", "stage", stage).increment();
     }
 
     /** 记录一次 LLM 上游调用端到端耗时（仅成功尝试），用于区分"模型等待"与"本地处理" */
@@ -110,6 +121,8 @@ public class AgentMetrics {
         snapshot.put("token_usage", tokenUsage.entrySet().stream()
                 .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get())));
         snapshot.put("llm_retries", llmRetries.entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get())));
+        snapshot.put("llm_degrades", llmDegrades.entrySet().stream()
                 .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get())));
         return snapshot;
     }

@@ -17,16 +17,25 @@ public class ToolSpec {
     private final int maxRetries;
     private final int rateLimitPerMin;
     private final List<String> requiredParams;
+    /** 是否为写操作工具。写操作受负面清单 + 人工确认双重约束（见 ToolRegistry / ToolExecutor） */
+    private final boolean writeOperation;
 
     public ToolSpec(String name, String description,
                     long timeoutMs, int maxRetries, int rateLimitPerMin,
                     List<String> requiredParams) {
+        this(name, description, timeoutMs, maxRetries, rateLimitPerMin, requiredParams, false);
+    }
+
+    public ToolSpec(String name, String description,
+                    long timeoutMs, int maxRetries, int rateLimitPerMin,
+                    List<String> requiredParams, boolean writeOperation) {
         this.name = name;
         this.description = description;
         this.timeoutMs = timeoutMs;
         this.maxRetries = maxRetries;
         this.rateLimitPerMin = rateLimitPerMin;
         this.requiredParams = requiredParams == null ? List.of() : requiredParams;
+        this.writeOperation = writeOperation;
     }
 
     public String getName() { return name; }
@@ -35,6 +44,7 @@ public class ToolSpec {
     public int getMaxRetries() { return maxRetries; }
     public int getRateLimitPerMin() { return rateLimitPerMin; }
     public List<String> getRequiredParams() { return requiredParams; }
+    public boolean isWriteOperation() { return writeOperation; }
 
     @Override
     public String toString() {

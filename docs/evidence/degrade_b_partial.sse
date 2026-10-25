@@ -1,0 +1,20 @@
+id:1
+event:intent
+data:{"type":"intent","intent":"ERROR_DIAGNOSIS"}
+
+id:2
+event:tool
+data:{"type":"tool","tool":"analyze_log","status":"done","summary":"已完成日志分析，匹配到 3 个已知错误模式"}
+
+id:3
+event:sources
+data:{"type":"sources","sources":[{"file":"registration.md","section":"registration.md > 推荐使用方式","relevance":21.780537883017857,"snippet":"## 推荐使用方式\r\n\r\n| 场景 | 推荐方式 |\r\n|------|---------|\r\n| 固定业务 Tab（如内容审核、数据看板） | **静态注册** |\r\n| 运营动态控制 Tab 显隐/排序 | 动态注册 |\r\n| 服务端 ..."},{"file":"how-to-register-tab.md","section":"how-to-register-tab.md > how-to-register-tab.md","relevance":19.318213579448557,"snippet":"# 如何注册一个业务 Tab"},{"file":"how-to-error-diagnosis.md","section":"how-to-error-diagnosis.md > how-to-error-diagnosis.md","relevance":17.656508588081905,"snippet":"# 如何用 AI OnCall 诊断错误"},{"file":"mock-server-api.md","section":"mock-server-api.md > 10.2 知识库更新方式","relevance":17.653946692944533,"snippet":"### 10.2 知识库更新方式\r\n\r\n| 方式 | 操作 | 适用场景 |\r\n|------|------|---------|\r\n| 本地文件 | SSH 上传 .md 到服务器 docs/，然后重启 | 临时更新 |\r\n| 远程拉取 ..."},{"file":"connect-timeout.md","section":"connect-timeout.md > 项目场景","relevance":16.842449177233497,"snippet":"## 项目场景\r\n\r\nAI OnCall 项目中使用 OkHttp 连接服务端时出现连接超时。"}]}
+
+id:5
+event:content
+data:{"type":"content","delta":"【降级提示】模型服务暂不可用，以下为基于已回收证据的部分诊断结论：\n【日志分析结果】\n\n检索到以下相关文档片段：\n\n> 【registration.md > 推荐使用方式】\n## 推荐使用方式\r\n\r\n| 场景 | 推荐方式 |\r\n|------|---------|\r\n| 固定业务 Tab（如内容审核、数据看板） | **静态注册** |\r\n| 运营动态控制 Tab 显隐/排序 | 动态注册 |\r\n| 服务端 A/B 测试不同 Tab 配置 | 动态注册 |\r\n\r\n两者可混用——容器同时支持静态和动态注册的 Tab。\n\n> 【how-to-register-tab.md > how-to-register-tab.md】\n# 如何注册一个业务 Tab\n\n> 【how-to-error-diagnosis.md > how-to-error-diagnosis.md】\n# 如何用 AI OnCall 诊断错误\n\n【请DeepSeek动态分析】\n请基于以上分析和用户提供的异常堆栈，生成如下结构化回答：\n1. 问题定位：具体哪一行代码出现问题\n2. 根因分析：为什么会触发该错误\n3. 修复方案：给出具体的代码修改建议\n4. 预防措施：如何避免类似错误"}
+
+id:6
+event:done
+data:{"type":"done","messageId":"a14c1a16-e685-4898-bc9e-89dc8a8cb424"}
+

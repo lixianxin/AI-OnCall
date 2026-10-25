@@ -35,6 +35,7 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
     private final KnowledgeMetrics knowledgeMetrics;
     private final ToolExecutor toolExecutor;   // Tool Runtime 治理层
     private final SemanticFallbackRouter semanticFallbackRouter; // Semantic Fallback（实验变量）
+    private final AgentMetrics agentMetrics;
 
     public DocumentAgentOrchestrator(
             ConversationStore conversationStore,
@@ -42,13 +43,15 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
             DeepSeekClient deepSeekClient,
             KnowledgeMetrics knowledgeMetrics,
             ToolExecutor toolExecutor,
-            SemanticFallbackRouter semanticFallbackRouter) {
+            SemanticFallbackRouter semanticFallbackRouter,
+            AgentMetrics agentMetrics) {
         this.conversationStore = conversationStore;
         this.documentStore = documentStore;
         this.deepSeekClient = deepSeekClient;
         this.knowledgeMetrics = knowledgeMetrics;
         this.toolExecutor = toolExecutor;
         this.semanticFallbackRouter = semanticFallbackRouter;
+        this.agentMetrics = agentMetrics;
     }
 
     @Override
@@ -197,6 +200,21 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
         Flux<ContentEvent> contentFlux = deepSeekClient
                 .stream(enrichedPrompt, updatedConv, message, toolResult.getDetailData())
                 .doOnNext(token -> fullReplyRef.get().append(token))
+                // 分级降级第三级：主链路与备用链路均失败（DeepSeekClient 内部已完成两级），
+                // 且本轮已回收工具证据 → 返回标注降级的部分诊断结论，而不是裸 error；
+                // 无证据可回收时维持 error 终态（不编造结论）。
+                .onErrorResume(e -> {
+                    String evidence = toolResult.getDetailData();
+                    if (evidence == null || evidence.isBlank()) {
+                        return Flux.error(e);
+                    }
+                    agentMetrics.recordLlmDegrade("partial_diagnosis");
+                    log.warn("[traceId={}] LLM 主备链路均失败，返回基于工具证据的部分诊断结论（降级）: {}",
+                            MDC.get("traceId"), e.getMessage());
+                    String partial = "【降级提示】模型服务暂不可用，以下为基于已回收证据的部分诊断结论：\n"
+                            + abbreviateEvidence(evidence);
+                    return Flux.just(partial);
+                })
                 .map(ContentEvent::new);
 
         // 4. SSE event stream: Intent -> Tool(real status: done/rate_limited/timeout/fallback) -> Sources -> Content -> Done
@@ -230,6 +248,12 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
         }).doOnError(e -> {
             log.error("DocumentAgent stream error: convId={}", conversationId, e);
         });
+    }
+
+    /** 部分诊断结论的证据截断：只保留前 800 字符，防止长文档证据刷屏 */
+    private String abbreviateEvidence(String evidence) {
+        String trimmed = evidence.strip();
+        return trimmed.length() > 800 ? trimmed.substring(0, 800) + "\n…（证据已截断）" : trimmed;
     }
 
     private void triggerSummary(Conversation conv) {

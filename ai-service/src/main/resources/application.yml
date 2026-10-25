@@ -17,6 +17,12 @@ deepseek:
   api-key: ${DEEPSEEK_API_KEY:replace-me}
   base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
   model: ${DEEPSEEK_MODEL:deepseek-chat}
+  # 分级降级第二级：备用模型链路。主链路重试耗尽后切换（独立凭据/额度，最多 2 次尝试）。
+  # 备用也失败时由编排层返回基于工具证据的部分诊断结论（第三级）。留空 = 未配置备用链路。
+  backup:
+    base-url: ${DEEPSEEK_BACKUP_BASE_URL:}
+    model: ${DEEPSEEK_BACKUP_MODEL:deepseek-chat}
+    api-key: ${DEEPSEEK_BACKUP_API_KEY:}   # 留空则沿用主 key
   # 上游错误分级退避重试（仅对 429/5xx/连接失败生效；其他 4xx 与流式输出开始后的异常不重试）
   # max-attempts: 总尝试次数（含首次）；budget-ms: 所有重试共享的总时间预算；
   # base-delay-ms: 指数退避基数（Retry-After 头存在时优先遵循上游指示）

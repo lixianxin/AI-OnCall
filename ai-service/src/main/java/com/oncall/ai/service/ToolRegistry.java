@@ -24,15 +24,28 @@ public class ToolRegistry {
 
     private final Map<String, Tool> tools = new ConcurrentHashMap<>();
 
+    /**
+     * 写操作负面清单：命中名单的写操作工具一律拒绝注册（启动即失败），
+     * 从机制上保证高危写操作不可能经由 Agent 工具链路触达生产系统。
+     */
+    public static final java.util.Set<String> WRITE_TOOL_DENYLIST = java.util.Set.of(
+            "restart_service", "stop_service", "deploy", "rollback_deploy",
+            "delete_data", "drop_table", "truncate_table", "kill_process", "modify_config");
+
     public ToolRegistry(List<Tool> toolBeans) {
         for (Tool tool : toolBeans) {
             ToolSpec spec = tool.spec();
             if (tools.containsKey(spec.getName())) {
                 throw new IllegalStateException("重复注册的工具 id: " + spec.getName());
             }
+            if (spec.isWriteOperation() && WRITE_TOOL_DENYLIST.contains(spec.getName())) {
+                throw new IllegalArgumentException(
+                        "写操作负面清单拦截: " + spec.getName() + " 属于禁止注册的高危写操作");
+            }
             tools.put(spec.getName(), tool);
         }
-        log.info("ToolRegistry 初始化完成，已注册 {} 个工具: {}", tools.size(), tools.keySet());
+        log.info("ToolRegistry 初始化完成，已注册 {} 个工具: {}（写操作负面清单 {} 项）",
+                tools.size(), tools.keySet(), WRITE_TOOL_DENYLIST.size());
     }
 
     public Optional<Tool> get(String toolId) {

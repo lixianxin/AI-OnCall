@@ -64,6 +64,16 @@ public class ToolExecutor {
         }
         ToolSpec spec = tool.spec();
 
+        // 0. 写操作人工确认：写工具未经确认拒绝执行（负面清单已在注册层拦截，
+        //    此处拦截"已注册但未被人工确认"的写操作，宁可拒绝不可误执行）。
+        //    状态用独立的 confirmation_required（不是 failed）：调用方可区分"拒绝原因"并引导补确认
+        if (spec.isWriteOperation() && !context.isWriteConfirmed()) {
+            log.warn("[traceId={}] 写操作未获人工确认，拒绝执行 tool={}", traceId, toolId);
+            metrics.recordTool(toolId, "confirmation_required", 0, 0);
+            return new ToolResult(toolId, "confirmation_required",
+                    "写操作需人工确认后执行（writeConfirmed=false）", List.of(), "", 0.0, 0.0);
+        }
+
         // 1. 参数校验
         List<String> missing = spec.getRequiredParams().stream()
                 .filter(p -> isMissing(context, p))
