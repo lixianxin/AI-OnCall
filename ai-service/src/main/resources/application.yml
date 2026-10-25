@@ -17,11 +17,18 @@ deepseek:
   api-key: ${DEEPSEEK_API_KEY:replace-me}
   base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
   model: ${DEEPSEEK_MODEL:deepseek-chat}
+  # 上游错误分级退避重试（仅对 429/5xx/连接失败生效；其他 4xx 与流式输出开始后的异常不重试）
+  # max-attempts: 总尝试次数（含首次）；budget-ms: 所有重试共享的总时间预算；
+  # base-delay-ms: 指数退避基数（Retry-After 头存在时优先遵循上游指示）
+  retry:
+    max-attempts: 3
+    budget-ms: 30000
+    base-delay-ms: 1000
 
 oncall:
   docs-path: ${ONCALL_DOCS_PATH:./docs}
-  # 杩滅鐭ヨ瘑搴撳湴鍧€銆傞厤缃悗鍚姩鏃惰嚜鍔ㄤ笅杞藉埌 docs-path 鐩綍锛岃鐩栨湰鍦版枃浠躲€?
-  # 鏀寔涓ょ妯″紡锛?
-  #   1. 鍗曚釜 .md 鏂囦欢 URL锛氱洿鎺ヤ笅杞借鏂囦欢
-  #   2. Manifest URL锛氳繑鍥炴枃鏈紝姣忚涓€涓?.md 鏂囦欢 URL锛堝 GitLab Raw 鐩綍绱㈠紩锛?
+  # 远程知识库地址。配置后启动时自动下载到 docs-path 目录，覆盖本地文件。
+  # 支持两种模式：
+  #   1. 单个 .md 文件 URL：直接下载该文件
+  #   2. Manifest URL：返回文本，每行一个 .md 文件 URL（如 GitLab Raw 目录索引）
   docs-remote-url: ${ONCALL_DOCS_REMOTE_URL:}

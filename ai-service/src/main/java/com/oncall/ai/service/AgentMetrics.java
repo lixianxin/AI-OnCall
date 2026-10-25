@@ -26,6 +26,8 @@ public class AgentMetrics {
     private final Map<String, AtomicLong> latencySumMs = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> retrySum = new ConcurrentHashMap<>();
     private final Map<String, AtomicLong> tokenUsage = new ConcurrentHashMap<>();
+    /** LLM 上游重试计数，key = 触发原因："429" / "5xx" / "connect_error" */
+    private final Map<String, AtomicLong> llmRetries = new ConcurrentHashMap<>();
 
     public void recordTool(String tool, String status, int retries, long latencyMs) {
         callCounts.computeIfAbsent(tool + ":" + status, k -> new AtomicLong()).incrementAndGet();
@@ -38,6 +40,11 @@ public class AgentMetrics {
 
     public void recordTokens(String source, long tokens) {
         tokenUsage.computeIfAbsent(source, k -> new AtomicLong()).addAndGet(tokens);
+    }
+
+    /** 记录一次 LLM 上游重试（429 / 5xx / connect_error），供 /metrics 观察限流与上游异常 */
+    public void recordLlmRetry(String reason) {
+        llmRetries.computeIfAbsent(reason, k -> new AtomicLong()).incrementAndGet();
     }
 
     private boolean isErrorStatus(String status) {
@@ -73,6 +80,8 @@ public class AgentMetrics {
         snapshot.put("errors_by_tool", errors);
         snapshot.put("per_tool", perTool);
         snapshot.put("token_usage", tokenUsage.entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get())));
+        snapshot.put("llm_retries", llmRetries.entrySet().stream()
                 .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get())));
         return snapshot;
     }
