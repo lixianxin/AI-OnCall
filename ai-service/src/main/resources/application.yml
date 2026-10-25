@@ -32,3 +32,15 @@ oncall:
   #   1. 单个 .md 文件 URL：直接下载该文件
   #   2. Manifest URL：返回文本，每行一个 .md 文件 URL（如 GitLab Raw 目录索引）
   docs-remote-url: ${ONCALL_DOCS_REMOTE_URL:}
+
+# Actuator：暴露 Prometheus 抓取端点（/actuator/prometheus）供监控系统采集。
+# 自定义 /metrics JSON 端点保持不变（人工排查用）；Prometheus 用 actuator 端点。
+# 注意：标签只用低基数字段（tool/status/reason），trace_id 等请求级信息归日志不归指标。
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      show-details: always

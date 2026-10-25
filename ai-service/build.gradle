@@ -19,6 +19,10 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    // 可观测性：actuator 提供 /actuator/prometheus 抓取端点与 http.server.requests
+    // 自动直方图；registry 把 Micrometer 指标暴露为 Prometheus 文本格式
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

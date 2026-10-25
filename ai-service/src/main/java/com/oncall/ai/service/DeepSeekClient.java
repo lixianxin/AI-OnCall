@@ -132,6 +132,7 @@ public class DeepSeekClient {
                 HttpResponse<java.io.InputStream> response =
                         httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
                 int status = response.statusCode();
+                long llmCallStartNs = System.nanoTime();
 
                 // ---- 可重试类：429 限流 / 5xx 服务端错误（尚未输出任何 token）----
                 if (status == 429 || status >= 500) {
@@ -188,6 +189,8 @@ public class DeepSeekClient {
                         }
                     }
                     if (sawDone) {
+                        // LLM 上游调用端到端耗时（仅成功尝试）：区分"模型等待"与"本地处理"
+                        agentMetrics.recordLlmLatency((System.nanoTime() - llmCallStartNs) / 1_000_000);
                         sink.complete();
                     } else {
                         // EOF 且未收到 [DONE]：流被截断。已输出部分内容，不重试（避免重复文本），

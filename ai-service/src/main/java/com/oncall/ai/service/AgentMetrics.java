@@ -1,5 +1,7 @@
 package com.oncall.ai.service;
 
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -16,6 +18,11 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * 这是学生项目与企业项目的分界线：不只是 print 日志，
  * 而是能聚合出"哪个工具慢、哪个工具错得多"。
+ *
+ * 2026-10-25（P2-2）：双写 Micrometer——原 JSON /metrics 保持不变（人工排查），
+ * 同时把同一份数据以 Counter/Timer 形式写入 Micrometer 全局 Registry，
+ * 由 actuator 的 /actuator/prometheus 以 Prometheus 文本格式暴露。
+ * 键均为低基数（tool/status/reason 固定枚举），无高基数标签风险。
  */
 @Component
 public class AgentMetrics {
@@ -36,15 +43,36 @@ public class AgentMetrics {
         if (isErrorStatus(status)) {
             errorCounts.computeIfAbsent(tool, k -> new AtomicLong()).incrementAndGet();
         }
+        // Micrometer 双写（Counter/Timer 按同名同标签自动去重，等价于 computeIfAbsent）
+        Metrics.counter("oncall.tool.calls", "tool", tool, "status", status).increment();
+        Metrics.counter("oncall.tool.retries", "tool", tool).increment(retries);
+        if (latencyMs > 0) {
+            Timer.builder("oncall.tool.latency").tag("tool", tool)
+                    .publishPercentiles(0.5, 0.95, 0.99)
+                    .register(Metrics.globalRegistry)
+                    .record(latencyMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }
     }
 
     public void recordTokens(String source, long tokens) {
         tokenUsage.computeIfAbsent(source, k -> new AtomicLong()).addAndGet(tokens);
+        Metrics.counter("oncall.tokens", "source", source).increment(tokens);
     }
 
     /** 记录一次 LLM 上游重试（429 / 5xx / connect_error），供 /metrics 观察限流与上游异常 */
     public void recordLlmRetry(String reason) {
         llmRetries.computeIfAbsent(reason, k -> new AtomicLong()).incrementAndGet();
+        Metrics.counter("oncall.llm.retries", "reason", reason).increment();
+    }
+
+    /** 记录一次 LLM 上游调用端到端耗时（仅成功尝试），用于区分"模型等待"与"本地处理" */
+    public void recordLlmLatency(long latencyMs) {
+        if (latencyMs > 0) {
+            Timer.builder("oncall.llm.call.latency")
+                    .publishPercentiles(0.5, 0.95, 0.99)
+                    .register(Metrics.globalRegistry)
+                    .record(latencyMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }
     }
 
     private boolean isErrorStatus(String status) {
