@@ -27,7 +27,11 @@ jmeter -n -t chat-stream-load.jmx -Jthreads=50 -Jduration=60 \
 ```
 
 跑完看 `report/index.html`（吞吐量 ≈ QPS、Avg/P95/P99 延迟）。
-若 jtl 为 CSV 无表头导致 `-e` 告警，直接用 `results/p1_glm_20260908/summary.json` 同款 python 解析 jtl 算百分位即可。
+若无 GUI report，用仓库内标准脚本 `parse_summary.py` 汇总 jtl（吞吐/分位数唯一口径，勿再手写一次性脚本）：
+
+```bash
+python parse_summary.py results.jtl -o summary.json
+```
 
 ## 压测记录
 
@@ -35,6 +39,9 @@ jmeter -n -t chat-stream-load.jmx -Jthreads=50 -Jduration=60 \
   0.40 req/s，P50 4.4s / P90 9.1s / P95 13.2s / P99 16.9s；窗口内工具调用 Δ=0（纯度验证）。
   归档：`results/p1_glm_20260908/`。附带修复：`chat-stream-load.jmx` HeaderManager 缺空 `<hashTree/>`。
   服务端 SSE 在 `done` 后连接不关闭的 bug 由本次压测暴露并已修复（见评测报告 §8.3）。
+  **勘误（2026-10-25）**：该目录 summary.json 的 `throughput_reqs` 原为 0.0（一次性解析脚本字段错位），
+  已按 `report/statistics.json`（0.3967）勘误；样本 48 的 P99 置信度弱已在 summary 内标注。
+  此后一律用 `parse_summary.py` 生成 summary，杜绝手工口径漂移。
 
 ## 口径纪律（务必遵守）
 

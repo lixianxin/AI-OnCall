@@ -100,7 +100,8 @@ public class SearchTool implements Tool {
                 List.of(),
                 "",
                 confidence,
-                0.0
+                0.0,
+                results // 空结果也带回：编排层据此判定未命中，不再重复检索
             );
         }
 
@@ -133,7 +134,8 @@ public class SearchTool implements Tool {
             sources,
             detailData,
             confidence,
-            bm25MaxScore
+            bm25MaxScore,
+            results // 带回原始检索结果，编排层复用，消除重复检索
         );
     }
 }

@@ -4,14 +4,16 @@ import com.oncall.ai.model.Conversation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oncall.ai.model.Message;
 import com.oncall.ai.model.Role;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -20,12 +22,38 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * DeepSeek（OpenAI 兼容协议）流式客户端，带上游错误分级退避重试。
+ *
+ * <p>重试语义（2026-10-25，针对 5 并发压测触发 GLM 免费档 429 限流的真实故障）：
+ * <ul>
+ *   <li><b>429</b>：优先遵循上游 Retry-After 头；无头则指数退避（base → 2× → 4×，封顶 8s）</li>
+ *   <li><b>5xx</b>：请求未产生任何输出 token，可安全重试</li>
+ *   <li><b>连接超时 / 连接失败（IOException）</b>：请求未送达，可安全重试</li>
+ *   <li><b>其他 4xx（401/402/参数错误等）</b>：终态，不重试——盲目重试只会重复失败</li>
+ *   <li><b>流式输出已开始后的异常</b>：不重试——客户端已收到部分文本，重放会造成重复内容；
+ *       直接 error 终止，由 SSE 错误事件机制兜底</li>
+ * </ul>
+ *
+ * <p>两级保护：
+ * <ol>
+ *   <li>最大尝试次数（{@code deepseek.retry.max-attempts}，含首次）</li>
+ *   <li>总时间预算（{@code deepseek.retry.budget-ms}）：所有重试共享，防止"每次重试都吃满
+ *       单请求超时"导致一个请求无限期占用资源</li>
+ * </ol>
+ *
+ * <p>与 ToolExecutor 治理层的关系：ToolExecutor 的重试针对<b>工具执行</b>，
+ * 本类重试针对<b>LLM 上游调用</b>，两层互不叠加（编排链路上每个环节只经过一层重试）。
+ */
 @Component
 public class DeepSeekClient {
 
     private static final Logger log = LoggerFactory.getLogger(DeepSeekClient.class);
+
+    private static final long MAX_BACKOFF_MS = 8_000;
 
     private final String apiKey;
     private final String baseUrl;
@@ -33,14 +61,24 @@ public class DeepSeekClient {
     private final HttpClient httpClient;
     private final AgentMetrics agentMetrics;
 
+    private final int retryMaxAttempts;
+    private final long retryBudgetMs;
+    private final long retryBaseDelayMs;
+
     public DeepSeekClient(
             @Value("${deepseek.api-key}") String apiKey,
             @Value("${deepseek.base-url:https://api.deepseek.com}") String baseUrl,
             @Value("${deepseek.model:deepseek-chat}") String modelName,
+            @Value("${deepseek.retry.max-attempts:3}") int retryMaxAttempts,
+            @Value("${deepseek.retry.budget-ms:30000}") long retryBudgetMs,
+            @Value("${deepseek.retry.base-delay-ms:1000}") long retryBaseDelayMs,
             AgentMetrics agentMetrics) {
         this.apiKey = apiKey;
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.modelName = modelName;
+        this.retryMaxAttempts = Math.max(1, retryMaxAttempts);
+        this.retryBudgetMs = retryBudgetMs;
+        this.retryBaseDelayMs = Math.max(0, retryBaseDelayMs);
         this.agentMetrics = agentMetrics;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
@@ -57,60 +95,158 @@ public class DeepSeekClient {
         log.debug("DeepSeek request: model={}, promptLen={}", modelName, requestBody.length());
         log.debug("DeepSeek body (first 500): {}", requestBody.length() > 500 ? requestBody.substring(0, 500) : requestBody);
 
-        return Flux.create(sink -> {
+        // MDC 是 ThreadLocal，响应式链路切线程不自动继承；捕获入口上下文带入重试线程
+        Map<String, String> mdcCtx = MDC.getCopyOfContextMap();
+
+        return Flux.<String>create(sink -> {
+                    if (mdcCtx != null) {
+                        MDC.setContextMap(mdcCtx);
+                    }
+                    try {
+                        executeWithRetry(sink, requestBody);
+                    } finally {
+                        MDC.clear();
+                    }
+                })
+                // 重试循环含同步 HTTP 与退避 sleep，放到 boundedElastic，避免阻塞事件循环线程
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /** 分级退避重试主循环。sink 只在确定不再重试时发出 error / complete。 */
+    private void executeWithRetry(reactor.core.publisher.FluxSink<String> sink, String requestBody) {
+        String traceId = MDC.get("traceId") != null ? MDC.get("traceId") : "n/a";
+        long deadline = System.currentTimeMillis() + retryBudgetMs;
+        long backoffMs = retryBaseDelayMs;
+
+        for (int attempt = 1; attempt <= retryMaxAttempts; attempt++) {
             try {
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(baseUrl + "/chat/completions"))
                         .header("Authorization", "Bearer " + apiKey)
                         .header("Content-Type", "application/json")
                         .header("Accept", "text/event-stream")
-                        .timeout(java.time.Duration.ofSeconds(60))
+                        .timeout(Duration.ofSeconds(60))
                         .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                         .build();
 
-                httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
-                        .thenAccept(response -> {
-                            int statusCode = response.statusCode();
-                            if (statusCode != 200) {
-                                String errorBody = "";
-                                try {
-                                    errorBody = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
-                                } catch (Exception ignored) {}
-                                log.error("DeepSeek API error: status={}, body={}", statusCode, errorBody);
-                                sink.error(new RuntimeException("DeepSeek API returned " + statusCode + ": " + errorBody));
-                                return;
-                            }
+                HttpResponse<java.io.InputStream> response =
+                        httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                int status = response.statusCode();
 
-                            try (BufferedReader reader = new BufferedReader(
-                                    new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
-                                String line;
-                                while ((line = reader.readLine()) != null) {
-                                    if (line.startsWith("data: ")) {
-                                        String data = line.substring(6).trim();
-                                        if ("[DONE]".equals(data)) {
-                                            break;
-                                        }
-                                        recordUsageIfPresent(data);
-                                        String content = extractDeltaContent(data);
-                                        if (content != null && !content.isEmpty()) {
-                                            sink.next(content);
-                                        }
-                                    }
-                                }
-                                sink.complete();
-                            } catch (Exception e) {
-                                sink.error(e);
+                // ---- 可重试类：429 限流 / 5xx 服务端错误（尚未输出任何 token）----
+                if (status == 429 || status >= 500) {
+                    String errorBody = readAndClose(response);
+                    long waitMs = Math.max(backoffMs, parseRetryAfterMs(response));
+                    // 时间预算保护：等待后必须仍预留至少一次尝试的空间，否则视为预算耗尽
+                    boolean canRetry = attempt < retryMaxAttempts
+                            && System.currentTimeMillis() + waitMs <= deadline;
+                    if (canRetry) {
+                        agentMetrics.recordLlmRetry(status == 429 ? "429" : "5xx");
+                        log.warn("[traceId={}] DeepSeek 上游 {}（attempt {}/{}），{}ms 后重试{}",
+                                traceId, status, attempt, retryMaxAttempts, waitMs,
+                                waitMs == backoffMs ? "" : "（遵循 Retry-After）");
+                        Thread.sleep(waitMs);
+                        backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF_MS);
+                        continue;
+                    }
+                    log.error("[traceId={}] DeepSeek 上游 {} 重试耗尽或超预算（attempt {}/{}）: {}",
+                            traceId, status, attempt, retryMaxAttempts, abbreviate(errorBody));
+                    sink.error(new RuntimeException("DeepSeek API returned " + status + ": " + errorBody));
+                    return;
+                }
+
+                // ---- 终态类：其他 4xx（鉴权/余额/参数错误），重试无意义 ----
+                if (status != 200) {
+                    String errorBody = readAndClose(response);
+                    log.error("[traceId={}] DeepSeek API error（终态，不重试）: status={}, body={}",
+                            traceId, status, abbreviate(errorBody));
+                    sink.error(new RuntimeException("DeepSeek API returned " + status + ": " + errorBody));
+                    return;
+                }
+
+                // ---- 200：流式读取。此点之后已可能向客户端输出 token，
+                //      任何异常都直接 error（不重试），避免重放造成重复文本 ----
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (line.startsWith("data: ")) {
+                            String data = line.substring(6).trim();
+                            if ("[DONE]".equals(data)) {
+                                break;
                             }
-                        })
-                        .exceptionally(e -> {
-                            log.error("DeepSeek request failed", e);
-                            sink.error(e);
-                            return null;
-                        });
+                            recordUsageIfPresent(data);
+                            String content = extractDeltaContent(data);
+                            if (content != null && !content.isEmpty()) {
+                                sink.next(content);
+                            }
+                        }
+                    }
+                    sink.complete();
+                } catch (Exception e) {
+                    log.error("[traceId={}] DeepSeek 流式读取中断（已输出部分内容，不重试）", traceId, e);
+                    sink.error(e);
+                }
+                return;
+
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                sink.error(ie);
+                return;
+            } catch (IOException e) {
+                // 请求未送达（连接超时 / 连接失败 / HttpTimeoutException）：
+                // 尚未产生任何输出 token，与 429/5xx 同属可重试类
+                boolean canRetry = attempt < retryMaxAttempts
+                        && System.currentTimeMillis() + backoffMs <= deadline;
+                if (canRetry) {
+                    agentMetrics.recordLlmRetry("connect_error");
+                    log.warn("[traceId={}] DeepSeek 连接失败（attempt {}/{}）：{}，{}ms 后重试",
+                            traceId, attempt, retryMaxAttempts, e.getMessage(), backoffMs);
+                    try {
+                        Thread.sleep(backoffMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        sink.error(ie);
+                        return;
+                    }
+                    backoffMs = Math.min(backoffMs * 2, MAX_BACKOFF_MS);
+                    continue;
+                }
+                log.error("[traceId={}] DeepSeek request failed（重试耗尽或超预算）", traceId, e);
+                sink.error(e);
+                return;
             } catch (Exception e) {
                 sink.error(e);
+                return;
             }
-        });
+        }
+    }
+
+    /** 读取错误响应体并关闭流 */
+    private String readAndClose(HttpResponse<java.io.InputStream> response) {
+        try (java.io.InputStream is = response.body()) {
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    /** 解析 Retry-After 头（秒），非法/缺失返回 0（回落到指数退避） */
+    private long parseRetryAfterMs(HttpResponse<java.io.InputStream> response) {
+        String retryAfter = response.headers().firstValue("Retry-After").orElse(null);
+        if (retryAfter == null || retryAfter.isBlank()) {
+            return 0;
+        }
+        try {
+            return Math.min(Long.parseLong(retryAfter.trim()) * 1000L, retryBudgetMs);
+        } catch (NumberFormatException e) {
+            return 0; // HTTP-date 形式暂不支持，回落指数退避
+        }
+    }
+
+    private String abbreviate(String s) {
+        if (s == null) return "";
+        return s.length() > 300 ? s.substring(0, 300) + "..." : s;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();

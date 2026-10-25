@@ -46,9 +46,9 @@ cd ai-service && ../gradlew bootRun
 # 2. 全量回归评测（200 条）
 python eval/evaluate.py --base http://localhost:8081 --save baseline
 
-# 3. 改动后再跑，对比
-python eval/evaluate.py --base http://localhost:8081 --save after_v2
-python eval/compare.py results/baseline.json results/after_v2.json
+# 3. 改动后再跑，对比（快照命名建议带日期，如 v3_after_20261101）
+python eval/evaluate.py --base http://localhost:8081 --save v3_after
+python eval/compare.py results/baseline.json results/v3_after.json
 ```
 
 ## 指标体系
@@ -72,4 +72,11 @@ python eval/compare.py results/baseline.json results/after_v2.json
 
 - ✅ 数据集 200 条已生成（固定种子）
 - ✅ evaluate.py / compare.py 就绪（纯标准库）
-- ⏳ 真实评测未跑（需启动服务）——跑完前，简历对应数字（92% / 87% / QPS / P99 / ≤300ms）一律不写
+- ✅ 真实评测已完成（2026-09-08，GLM-4-Flash 上游，回放式 SSE 评测）：
+  `results/latest.json` 为最近一次输出（diagnosis_v2，200 样本）——
+  Intent Accuracy 89.5%、Tool Selection Accuracy 88.33%（180 条工具任务）、
+  Root Cause Accuracy 95.0%（120 条诊断样本）
+- ✅ 快照存档可复现 Delta：`baseline.json`、`v2_before_20260908.json` / `v2_after_20260908.json`、
+  `rerun_20260908.json`、`p0_glm_20260908.json`
+- 口径纪律不变：简历或文档引用任何数字，必须能指到对应快照文件与评测条件（模型、样本数、口径定义）；
+  `baseline.example.json` 仅演示格式，不是真实结果
