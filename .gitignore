@@ -179,3 +179,10 @@ aioncall-bundle.bundle
 ci-logs.zip
 *.zip.part
 ai-service/data/
+
+# —— 2026-10-25 治理增补 ——
+*.bak
+*.orig
+.DS_Store
+Thumbs.db
+*.iml
