@@ -1,0 +1,28 @@
+id:1
+event:intent
+data:{"type":"intent","intent":"ERROR_DIAGNOSIS"}
+
+id:2
+event:tool
+data:{"type":"tool","tool":"analyze_log","status":"done","summary":"已完成日志分析，匹配到 3 个已知错误模式"}
+
+id:3
+event:sources
+data:{"type":"sources","sources":[{"file":"mock-server-api.md","section":"mock-server-api.md > 3.5 多轮对话","relevance":28.01304225058766,"snippet":"### 3.5 多轮对话\r\n\r\n- `ConversationStore` 使用 `ConcurrentHashMap` 内存存储\r\n- 每次请求保留最近 10 条消息作为上下文\r\n- 消息角色：USER / ASSISTANT / SYS..."},{"file":"qa-pairs.md","section":"qa-pairs.md > Q39","relevance":26.64969040162437,"snippet":"### Q39\r\n**问题**：1001 错误是什么原因？怎么解决？\r\n**答案**：两个 Tab 使用了相同的 id 字符串。解决方案：检查所有已注册的 Tab，确保 id 全局唯一，修改其中一个为不同的值。"},{"file":"qa-pairs.md","section":"qa-pairs.md > Q45","relevance":24.10711724447505,"snippet":"### Q45\r\n**问题**：怎么注册一个 Tab？需要传哪些参数？\r\n**答案**：调用 `container.registerTab(definition, lifecycle, page)`，传三个参数：TabDefinition（..."},{"file":"qa-pairs.md","section":"qa-pairs.md > Q36","relevance":23.463504710161743,"snippet":"### Q36\r\n**问题**：怎么废弃一个字段？\r\n**答案**：分两步：v1.x 版本标记 `@Deprecated` 并注释替代方案 → v2.0 正式移除。给接入方足够的过渡时间。"},{"file":"qa-pairs.md","section":"qa-pairs.md > Q58","relevance":22.438507028423416,"snippet":"### Q58\r\n**问题**：ViewModel 的 viewModelScope 有什么用？\r\n**答案**：`viewModelScope` 是 ViewModel 的协程作用域，当 ViewModel.onCleared() 被调用..."}]}
+
+id:5
+event:content
+data:{"type":"content","delta":"根据"}
+
+id:6
+event:content
+data:{"type":"content","delta":"知识库，"}
+
+id:7
+event:content
+data:{"type":"content","delta":"建议先查 top。"}
+
+id:8
+event:done
+data:{"type":"done","messageId":"73da6427-f6da-4dd7-b4ba-969b9ee9c2ad"}
+

@@ -27,6 +27,9 @@ deepseek:
 
 oncall:
   docs-path: ${ONCALL_DOCS_PATH:./docs}
+  # 会话持久化（SQLite 写透）：重启后会话历史/摘要/已处理消息标识可恢复。
+  # 存储故障自动降级为纯内存模式（ERROR 日志），不阻塞对话主链路。
+  db-path: ${ONCALL_DB_PATH:./data/aioncall.db}
   # 远程知识库地址。配置后启动时自动下载到 docs-path 目录，覆盖本地文件。
   # 支持两种模式：
   #   1. 单个 .md 文件 URL：直接下载该文件

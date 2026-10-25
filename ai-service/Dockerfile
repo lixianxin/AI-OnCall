@@ -1,9 +1,10 @@
 # ── 构建阶段：JDK21 + Gradle 标准构建 ─────────────────────────────
-# 受限网络可选镜像：--build-arg GRADLE_DIST_URL=<镜像URL> --build-arg USE_MIRROR=on
-# 默认走官方源（services.gradle.org / plugins.gradle.org / maven central）
+# 发行包默认走腾讯镜像（仓库 wrapper 同源，官方源在受限网络不稳定，2026-10-25 实测）；
+# 官方源：--build-arg GRADLE_DIST_URL=https://services.gradle.org/distributions/gradle-9.5.1-bin.zip
+# 依赖仓库镜像：--build-arg USE_MIRROR=off 可关闭（默认 on，走阿里云）
 FROM eclipse-temurin:21-jdk AS build
-ARG GRADLE_DIST_URL=https://services.gradle.org/distributions/gradle-9.5.1-bin.zip
-ARG USE_MIRROR=off
+ARG GRADLE_DIST_URL=https://mirrors.cloud.tencent.com/gradle/gradle-9.5.1-bin.zip
+ARG USE_MIRROR=on
 WORKDIR /app
 
 # 先拷构建脚本利用 Docker 层缓存

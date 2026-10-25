@@ -1,0 +1,28 @@
+id:1
+event:intent
+data:{"type":"intent","intent":"ERROR_DIAGNOSIS"}
+
+id:2
+event:tool
+data:{"type":"tool","tool":"analyze_log","status":"done","summary":"已完成日志分析，匹配到 3 个已知错误模式"}
+
+id:3
+event:sources
+data:{"type":"sources","sources":[{"file":"qa-pairs.md","section":"qa-pairs.md > Q42","relevance":23.33598115474156,"snippet":"### Q42\r\n**问题**：1004 超时了怎么排查？\r\n**答案**：生命周期回调执行超过 5 秒。重点检查 onCreate 和 onResume 中是否有同步耗时操作——网络请求、数据库查询、文件 I/O 等必须改为异步执行。"},{"file":"mock-server-api.md","section":"mock-server-api.md > 3.5 多轮对话","relevance":21.855987192932748,"snippet":"### 3.5 多轮对话\r\n\r\n- `ConversationStore` 使用 `ConcurrentHashMap` 内存存储\r\n- 每次请求保留最近 10 条消息作为上下文\r\n- 消息角色：USER / ASSISTANT / SYS..."},{"file":"qa-pairs.md","section":"qa-pairs.md > Q81","relevance":21.57814131723975,"snippet":"### Q81\r\n**问题**：切了几个 Tab 后 App 崩溃 OOM 了，怎么排查？\r\n**答案**：Tab 切换时旧页面资源未释放。检查 onPause/onDestroy 中是否清理了大对象（Bitmap 缓存、大量数据列表）。建..."},{"file":"qa-pairs.md","section":"qa-pairs.md > Q39","relevance":20.405957911820828,"snippet":"### Q39\r\n**问题**：1001 错误是什么原因？怎么解决？\r\n**答案**：两个 Tab 使用了相同的 id 字符串。解决方案：检查所有已注册的 Tab，确保 id 全局唯一，修改其中一个为不同的值。"},{"file":"qa-pairs.md","section":"qa-pairs.md > Q26","relevance":19.87512146343265,"snippet":"### Q26\r\n**问题**：route 字段怎么写？有格式要求吗？\r\n**答案**：必须以 `/` 开头，且全局唯一。建议使用有意义的路径名，如 `/content-audit`。不要与容器内置路由冲突。"}]}
+
+id:5
+event:content
+data:{"type":"content","delta":"根据"}
+
+id:6
+event:content
+data:{"type":"content","delta":"知识库，"}
+
+id:7
+event:content
+data:{"type":"content","delta":"建议先查 top。"}
+
+id:8
+event:done
+data:{"type":"done","messageId":"a86f0bf6-28b1-4849-91ec-9ba1db3b76af"}
+

@@ -23,6 +23,8 @@ dependencies {
     // 自动直方图；registry 把 Micrometer 指标暴露为 Prometheus 文本格式
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
+    // 会话持久化（SQLite 写透）；版本取自 maven.aliyun.com 元数据的最新 release（2026-10-25）
+    implementation 'org.xerial:sqlite-jdbc:3.53.4.0'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

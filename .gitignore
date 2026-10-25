@@ -178,3 +178,4 @@ ai-service/bin/
 aioncall-bundle.bundle
 ci-logs.zip
 *.zip.part
+ai-service/data/
