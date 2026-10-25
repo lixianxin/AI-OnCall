@@ -1,0 +1,7 @@
+# 行尾规范化：防止 Windows 检出（autocrlf）把 shell 脚本转成 CRLF，
+# 破坏 Linux 容器构建（gradlew shebang 带 \r 导致 /bin/sh\r 无法执行，
+# 2026-10-25 干净环境 docker build 实测踩坑）
+ai-service/gradlew text eol=lf
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf

@@ -1,0 +1,17 @@
+# 本地部署验证用运行镜像（jar 由宿主机构建，绕开容器内构建的网络约束）。
+# 正式多阶段构建路径仍是 ai-service/Dockerfile；本文件验证的是
+# 「运行镜像启动 + 健康检查 + SSE 端到端」这段部署核心链路。
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY ai-service/build/libs/*.jar app.jar
+COPY ai-service/docs/ /app/docs/
+
+ENV SERVER_PORT=8081 \
+    DEEPSEEK_API_KEY= \
+    ONCALL_DOCS_PATH=/app/docs
+EXPOSE 8081
+
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD curl -sf http://localhost:8081/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

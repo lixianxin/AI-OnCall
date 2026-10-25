@@ -1,0 +1,34 @@
+// 可选的构建期 Maven/Gradle 插件镜像（仅 docker build 使用，不进运行镜像）。
+// 启用方式：docker build --build-arg USE_MIRROR=on
+// 背景：受限网络下 plugins.gradle.org / plugins-artifacts.gradle.org /
+// repo.maven.apache.org 存在 DNS/连接抖动（2026-10-25 干净环境构建实测），
+// 官方源保留为默认，镜像走阿里云。
+//
+// 注意两条解析路径都要覆盖：
+// 1. plugins {} DSL → settings 的 pluginManagement（buildscript 覆盖不到它，
+//    2026-10-25 实测踩坑：只清 buildscript 时插件仍只搜 Gradle Central）
+// 2. buildscript.classpath 与项目依赖 → buildscript/project repositories
+settingsEvaluated { settings ->
+    settings.pluginManagement {
+        repositories {
+            maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+            maven { url 'https://maven.aliyun.com/repository/spring-plugin' }
+            maven { url 'https://maven.aliyun.com/repository/public' }
+            gradlePluginPortal()  // 官方源兜底
+        }
+    }
+}
+allprojects {
+    buildscript {
+        repositories {
+            clear()
+            maven { url = 'https://maven.aliyun.com/repository/gradle-plugin' }
+            maven { url = 'https://maven.aliyun.com/repository/spring-plugin' }
+            maven { url = 'https://maven.aliyun.com/repository/public' }
+        }
+    }
+    repositories {
+        clear()
+        maven { url = 'https://maven.aliyun.com/repository/public' }
+    }
+}

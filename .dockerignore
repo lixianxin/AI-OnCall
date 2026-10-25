@@ -1,0 +1,9 @@
+# 缩小构建上下文：仓库里 25M .git 与 client-android 均与镜像构建无关
+.git
+client-android
+**/loadtest/results/
+**/build/
+!ai-service/build/libs/*.jar
+docs/evidence/
+*.zip
+*.bundle
