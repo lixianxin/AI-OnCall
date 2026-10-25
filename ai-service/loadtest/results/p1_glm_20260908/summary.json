@@ -2,12 +2,15 @@
  "samples": 48,
  "errors": 0,
  "error_rate": 0.0,
- "throughput_reqs": 0.0,
+ "throughput_reqs": 0.3967,
+ "throughput_source": "report/statistics.json throughput=0.39667803（JMeter 官方统计，约 48 样本 / 121s 实际窗口）",
+ "throughput_errata": "原值 0.0 为一次性解析脚本字段错位所致，2026-10-25 按 statistics.json 勘误；口径为全窗口平均吞吐（含请求间隔），非瞬时峰值",
  "avg_ms": 4969.6,
  "min_ms": 709.0,
  "p50_ms": 4410.0,
  "p90_ms": 9054.0,
  "p95_ms": 13154.0,
  "p99_ms": 16926.0,
- "max_ms": 16926.0
+ "max_ms": 16926.0,
+ "percentile_caveat": "样本量 48，P99 统计置信度弱，仅供趋势参考，不作为容量结论"
 }
