@@ -91,12 +91,27 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
             elapsedMs = System.currentTimeMillis() - startMs;
         }
 
+        // ====== 检索结果统一来源（消除重复检索）======
+        // 旧行为：SearchTool 内部已 searchWithScores(query, 5)，编排层此处又用相同参数
+        // （query=message、TOP_K=5、同一 DocumentStore、BM25 确定性打分）再搜一次，
+        // 属纯冗余 I/O——每个诊断请求白做一次全库检索。
+        // 现行为：优先复用 Tool 治理层带回的检索结果；工具未返回结果
+        // （降级/超时/非检索类工具）时才由编排层补检索，与旧行为兼容。
+        List<SearchResult> rawResults;
+        if ("none".equals(toolName)) {
+            rawResults = List.of();
+        } else if (toolResult.getSearchResults() != null) {
+            rawResults = toolResult.getSearchResults();
+        } else {
+            rawResults = documentStore.searchWithScores(message, TOP_K);
+        }
+
         // ====== RAG DEBUG LOGGING ======
         if (log.isDebugEnabled() && ("search".equals(toolName) || "analyze_log".equals(toolName))) {
             log.debug("======== RAG_DEBUG ========");
             log.debug("Question: {}", message);
             log.debug("Tool: {}", toolName);
-            List<SearchResult> debugResults = documentStore.searchWithScores(message, 3);
+            List<SearchResult> debugResults = rawResults.stream().limit(3).collect(Collectors.toList());
             for (int i = 0; i < debugResults.size(); i++) {
                 SearchResult sr = debugResults.get(i);
                 DocumentChunk chunk = sr.getChunk();
@@ -111,14 +126,9 @@ public class DocumentAgentOrchestrator implements AgentOrchestrator {
 
         // Build validResults: single source of truth for hit and sourceItems
         double MIN_SCORE = 0.5;
-        List<SearchResult> validResults;
-        if ("none".equals(toolName)) {
-            validResults = List.of();
-        } else {
-            validResults = documentStore.searchWithScores(message, TOP_K).stream()
-                .filter(r -> r.getScore() >= MIN_SCORE)
-                .collect(Collectors.toList());
-        }
+        List<SearchResult> validResults = rawResults.stream()
+            .filter(r -> r.getScore() >= MIN_SCORE)
+            .collect(Collectors.toList());
 
         // Hit determination from validResults (single data source)
         String chineseOnly = message.replaceAll("[^\u4e00-\u9fff]", "");
