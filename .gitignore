@@ -166,3 +166,10 @@ local.properties
 
 # Java/Eclipse style build output
 ai-service/bin/
+
+# 签名密钥与敏感凭据（严禁入库：2026-10-25 曾有 key.jks 误提交，已移除追踪）
+*.jks
+*.keystore
+*.p12
+*.pem
+.env
