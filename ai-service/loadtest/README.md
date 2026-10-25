@@ -35,6 +35,11 @@ python parse_summary.py results.jtl -o summary.json
 
 ## 压测记录
 
+- **2026-10-25 并发冒烟（并发校准，mock 上游）**：10×3 / 20×3 / 50×2 共 190 条 SSE 流
+  **100% 干净终结**（done，无挂死、无 5xx、无 ERROR 级日志）；50 并发下工具限流按设计降级
+  （WARN 记录，客户端无感知）。脚本：`concurrency_smoke.py`（正式压测前的并发校准步骤）。
+  **口径声明：mock 上游数字仅反映服务端并发行为（连接管理/编排/治理），不代表真实 LLM 延迟与
+  吞吐，不冻结、不进简历。** 原始输出：`docs/evidence/smoke_*.json`。
 - **2026-09-08 P1（GLM-4-Flash 实测）**：2 并发 × 120s 纯 LLM 闲聊链路 → 48 样本 0 错误，
   0.40 req/s，P50 4.4s / P90 9.1s / P95 13.2s / P99 16.9s；窗口内工具调用 Δ=0（纯度验证）。
   归档：`results/p1_glm_20260908/`。附带修复：`chat-stream-load.jmx` HeaderManager 缺空 `<hashTree/>`。

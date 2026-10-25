@@ -1,0 +1,18 @@
+[smoke] 50 并发 × 2 请求 = 100 条 SSE 流 → http://localhost:8081
+{
+  "total_streams": 100,
+  "completed": 100,
+  "outcomes": {
+    "done": 100
+  },
+  "all_terminated_cleanly": true,
+  "wall_seconds": 0.9,
+  "throughput_streams_per_s": 112.61,
+  "latency_ms_end_to_end": {
+    "p50": 183.9,
+    "p95": 611.6,
+    "max": 714.8
+  },
+  "sample_count_note": ">=100 样本",
+  "caliber": "端到端（含上游等待）；mock 上游时数字仅反映服务端并发行为，不代表真实 LLM 容量"
+}

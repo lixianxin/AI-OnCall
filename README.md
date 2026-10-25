@@ -71,6 +71,20 @@ AI-OnCall/
 
 > 口径与 `数字冻结表.md` 一致；评测脚本、数据集与结果文件随仓库提供，可按下方命令复现。
 
+## 工程加固记录（2026-10-25，全部附验证证据：`docs/evidence/`）
+
+一轮以"发现 → 定位 → 修复 → 回归"为单位的加固，每项都留下可复现的验证记录：
+
+| 类别 | 内容 | 验证方式 |
+| --- | --- | --- |
+| 上游故障治理 | LLM 调用分级退避重试（429 遵循 Retry-After / 5xx、连接失败可重试 / 其他 4xx 终态 / 流式输出开始后不重试），最大尝试次数 + 共享总时间预算两级保护 | OpenAI 兼容 mock 上游故障注入：429×2 恢复、持续限流终态、连接失败、流截断四场景逐一验证（[报告](docs/evidence/2026-10-25-retry-injection.md)） |
+| 缺陷修复 | 故障注入发现：上游流中途断开（EOF 无 `[DONE]`）被当正常完成，半截答案静默送达——修复为 `[DONE]` 哨兵校验，截断以 error 终态兜底 | 注入复测：截断场景客户端收到 `error` 而非 `done`，且不重试 |
+| 性能 | 消除诊断链路重复检索（编排层与工具内部各一次、debug 日志第三次），检索 I/O 次数减半 | 200-case 全量回归：Intent / Tool / No-Tool / Fallback 与基线逐位一致，路由零变化（[报告](docs/evidence/2026-10-25-dedup-regression.md)） |
+| 可靠性 | 会话状态 SQLite 写透持久化（历史/摘要/工作记忆/去重标识重启可恢复），存储故障自动降级纯内存不阻塞主链路 | 杀进程重启：去重标识跨重启生效（重放返回 DUPLICATE_MESSAGE）、LLM 上下文含重启前消息（[报告](docs/evidence/2026-10-25-sqlite-persistence.md)） |
+| 可观测性 | 指标以 Micrometer 双写暴露 `/actuator/prometheus`（工具调用/延迟分位数/LLM 重试/Token/LLM 分段计时），标签强制低基数 | 429 注入后 `oncall_llm_retries_total{reason=429}=2` 与 mock 计数、JSON `/metrics` 三方印证（[报告](docs/evidence/2026-10-25-prometheus-metrics.md)） |
+| 部署 | 运行镜像容器内启动验证（1.4s 启动、healthcheck healthy、宿主↔容器跨网络 SSE 端到端）；干净环境构建发现并修复 CRLF 破坏 `gradlew` 的缺陷（`.gitattributes` + Dockerfile 防御性处理） | [部署验证报告](docs/evidence/2026-10-25-deploy-local.md)；容器内多阶段构建与云部署进行中 |
+| 并发 | 并发冒烟（并发校准，正式压测前置步骤）：10/20/50 并发共 190 条 SSE 流 **100% 干净终结**（done，无挂死、无 5xx、无 ERROR 级日志）；50 并发下工具限流按设计降级、客户端无感知 | `ai-service/loadtest/concurrency_smoke.py`，结果存 `docs/evidence/smoke_*.json`；mock 上游口径，不代表真实 LLM 容量 |
+
 ## 已知边界（Known Limitations）
 
 主动记录，避免被当作"生产就绪"过度解读：
